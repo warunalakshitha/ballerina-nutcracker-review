@@ -6,18 +6,18 @@ You review ONE open PR and produce local files. Never post, comment, push, commi
 - Review checklist (authoritative): `$TOOLS/skills/pr-review/SKILL.md`. Read it fully. For PRs under `lib/stdlibs/`, also `stdlib-review.md` in the same directory.
 - Output format for findings: `$TOOLS/skills/pre-pr-review/references/github-posting.md` and `assets/findings.json` in that skill dir. Do not run its post_review.py.
 - Scripts ($TOOLS/skills/pre-pr-review/scripts): `check_parallel.py <base>`, `check_duplicate_tests.py <base>`, `stack.py <N>` (run inside the main clone), `patch_coverage.py <base>`.
-- Read the review skill from `$TOOLS/skills/` (the ballerina-nutcracker-review checkout), not from `$REPO`; repo rules (AGENTS.md, docs, the repo's own `.agents/skills`) come from `$REPO` at `origin/main`. `skill_version` in findings.json = sha256 of `$TOOLS/skills/pr-review/SKILL.md`.
+- Read the review skill from `$TOOLS/skills/` (the ballerina-nutcracker-review checkout), not from `$REPO`; repo rules (AGENTS.md, docs, the repo's own `.agents/skills`) come from `$REPO` at `$UPSTREAM/main`. `skill_version` in findings.json = sha256 of `$TOOLS/skills/pr-review/SKILL.md`.
 
 ## Start of every review
 - Cloud sessions block GitHub GraphQL: use `gh api` REST routes only. `gh pr view/list/checks --json` and `gh issue list` fail there; use `gh api repos/<repo>/pulls/<n>` (`mergeable`, `head.sha`), `.../commits/<sha>/check-runs`, `.../pulls/<n>/ccr/review_threads` and `gh api 'search/issues?q=repo:<repo>+<words>'` for duplicate searches.
-- Fetch `origin main` and the PR head. If the live PR head differs from the ref in your prompt, review the live head and say so.
-- Mergeability gate: if `git merge-tree --write-tree origin/main <head>` (or, for a stacked PR, against its base PR's head) reports a conflict, stop: no review, no findings.json changes, report "conflicting".
+- Fetch `$UPSTREAM main` and the PR head (`git fetch $UPSTREAM +refs/pull/<N>/head:refs/review/pr<N>`). If the live PR head differs from the ref in your prompt, review the live head and say so.
+- Mergeability gate: if `git merge-tree --write-tree $UPSTREAM/main <head>` (or, for a stacked PR, against its base PR's head) reports a conflict, stop: no review, no findings.json changes, report "conflicting".
 - If `$SP/review-out/<N>/NEXT-ROUND.md` exists, read it first: it records what an interrupted earlier round found.
 - Re-review without a local findings.json, or with one that doesn't match GitHub (findings posted there but missing locally): reconstruct every still-open finding of ours exactly from GitHub (marker `pre-pr-review:finding id=...`) and the last summary, before judging anything, so the posting script doesn't resolve open threads by mistake.
 - Re-review: list the finding classes from earlier rounds (ours, CodeRabbit's, humans') first. If a new finding repeats one, apply the skill's Repeated symptoms rule instead of posting another instance.
 
 ## Paths
-- Main clone: `$REPO` (the checkout this run cloned), remote `origin` = ballerina-nutcracker/ballerina. Only `git fetch` and `git worktree add` there; never modify its working tree or run scripts in it.
+- Main clone: `$REPO`. `$UPSTREAM` is its remote for ballerina-nutcracker/ballerina: `origin` in a cloud run (the run cloned it), `pr730remote` in the local clone `/Users/waruna/Dev/Git/ballerina-lang-go` (whose `origin` is the user's fork). Your prompt gives `$REPO`, `$TOOLS`, `$UPSTREAM` and `$SP`. Only `git fetch` and `git worktree add` there; never modify its working tree or run scripts in it.
 - Scratch `$SP` = the session scratchpad given in your prompt (under /private/tmp). The user clears /tmp periodically: keep only disposable work there (worktrees `$SP/pr<N>-*`, probes, `$SP/review-out/<N>/findings.json`). If files vanish mid-run, recreate what you need and say so.
 - Spec: `$SP/spec.html` (if missing: `curl -sL https://raw.githubusercontent.com/ballerina-platform/ballerina-spec/master/lang/spec.html -o $SP/spec.html`). Spec wins over jBallerina.
 - Spec questions go to a clean-context subagent: give it only the spec section(s) and the repro program, never the PR text, your reasoning or jBallerina's output, and ask for the expected behaviour with the spec rule it rests on. Its answer decides the finding; jBallerina output is supporting data, and a jBallerina difference alone is never a finding.

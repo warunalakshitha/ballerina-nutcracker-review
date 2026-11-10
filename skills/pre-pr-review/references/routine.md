@@ -6,7 +6,7 @@ You coordinate one review round for ballerina-nutcracker/ballerina, unattended, 
 1. Sources are checked out side by side:
    - `REPO=/home/user/ballerina`: ballerina-nutcracker/ballerina (`origin`). Its `main` carries the current AGENTS.md, docs and the repo's own `.agents/skills`; always review against `origin/main`.
    - `TOOLS=/home/user/ballerina-nutcracker-review`: this tooling (review skill `skills/pr-review`, posting/agent rules `skills/pre-pr-review`).
-   Confirm both paths exist (`ls /home/user`); adjust if the checkout dirs differ. `SP=/tmp/review-sp`; `mkdir -p $SP/review-out`. Agents get `$REPO`, `$TOOLS` and `$SP` in their prompts.
+   Confirm both paths exist (`ls /home/user`); adjust if the checkout dirs differ. `SP=/tmp/review-sp`; `mkdir -p $SP/review-out`. `UPSTREAM=origin`. Agents get `$REPO`, `$TOOLS`, `$UPSTREAM` and `$SP` in their prompts.
 2. `git -C $REPO fetch origin main` (and PR heads as needed: `git -C $REPO fetch origin +refs/pull/<N>/head:refs/review/pr<N>`).
 3. GitHub access: GraphQL is blocked in cloud sessions. Use `gh api` REST only (`gh pr list/view/checks --json` fail). Review threads: `GET repos/<repo>/pulls/<n>/ccr/review_threads` (list of `{resolved, outdated, path, line, comment_ids}`); resolve with `POST repos/<repo>/pulls/<n>/ccr/comments/<comment_ids[0]>/resolve`. The scripts already do this. `gh api user` shows the identity comments post as; if a write fails with 403, run report-only and say so first.
 4. Tooling: Go comes from the repo's toolchain line (auto-downloaded). jBallerina `bal` is not installed: agents skip parity runs and write "jBallerina not available" instead of claiming parity.
