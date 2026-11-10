@@ -41,9 +41,18 @@ def remote_for(repo):
 
 
 def open_prs(repo):
-    out = run("gh", "pr", "list", "-R", repo, "--state", "open", "--limit", "300", "--json",
-              "number,title,headRefName,baseRefName,headRefOid,baseRefOid,isDraft").stdout
-    return json.loads(out)
+    """Open PRs via REST (GraphQL, and so `gh pr list --json`, is blocked in Claude Code cloud sessions).
+    Pages are requested explicitly: the cloud proxy rejects the numeric-id URLs `--paginate` follows."""
+    prs, page = [], 1
+    while True:
+        out = run("gh", "api", f"repos/{repo}/pulls?state=open&per_page=100&page={page}").stdout
+        batch = json.loads(out) if out.strip() else []
+        prs += [{"number": p["number"], "title": p["title"], "headRefName": p["head"]["ref"],
+                 "baseRefName": p["base"]["ref"], "headRefOid": p["head"]["sha"],
+                 "baseRefOid": p["base"]["sha"], "isDraft": p["draft"]} for p in batch]
+        if len(batch) < 100:
+            return prs
+        page += 1
 
 
 def build_stack(prs, number, default_branch, tip):

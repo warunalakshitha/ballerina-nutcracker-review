@@ -18,26 +18,41 @@ class GhError(RuntimeError):
     pass
 
 
-def api(path, paginate=False, tries=4):
-    """GET a REST path (relative to api.github.com). With paginate, returns the concatenated list."""
-    args = ["gh", "api", path]
-    if paginate:
-        args += ["--paginate", "--jq", ".[] | @json"]
+def _get(path, tries):
     err = ""
     for i in range(tries):
         try:
-            r = subprocess.run(args, capture_output=True, text=True, timeout=120)
+            r = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=120)
         except subprocess.TimeoutExpired:
             err = f"timed out: gh api {path}"
             time.sleep(3 * (i + 1))
             continue
         if r.returncode == 0:
-            if paginate:
-                return [json.loads(line) for line in r.stdout.splitlines() if line.strip()]
             return json.loads(r.stdout) if r.stdout.strip() else None
         err = (r.stderr or r.stdout).strip()
-        time.sleep(3 * (i + 1))
+        if i + 1 < tries:
+            time.sleep(3 * (i + 1))
     raise GhError(err[:300])
+
+
+def api(path, paginate=False, tries=4):
+    """GET a REST path (relative to api.github.com). With paginate, returns the concatenated list.
+
+    Pages are requested explicitly with `page=N`: `gh api --paginate` follows GitHub's Link
+    headers, which use numeric `repositories/{id}` URLs that the cloud proxy rejects."""
+    if not paginate:
+        return _get(path, tries)
+    items, page = [], 1
+    sep = "&" if "?" in path else "?"
+    if "per_page=" not in path:
+        path += f"{sep}per_page=100"
+        sep = "&"
+    while True:
+        batch = _get(f"{path}{sep}page={page}", tries) or []
+        items += batch
+        if len(batch) < 100:
+            return items
+        page += 1
 
 
 def open_prs():
