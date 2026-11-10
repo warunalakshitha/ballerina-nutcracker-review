@@ -1,0 +1,144 @@
+"""REST-only GitHub helpers for the review scripts.
+
+Claude Code cloud sessions block GraphQL (and so `gh pr list/view/checks --json`), so everything
+here uses `gh api` REST routes, plus the `ccr/review_threads` route those sessions provide for
+review threads. Every call is retried; a call that still fails raises GhError.
+"""
+import json
+import os
+import subprocess
+import time
+
+REPO = os.environ.get("REVIEW_REPO", "ballerina-nutcracker/ballerina")
+ME = os.environ.get("REVIEWER", "warunalakshitha")
+DONT_MERGE = ("merge", "dnm", "hold", "wip")
+
+
+class GhError(RuntimeError):
+    pass
+
+
+def api(path, paginate=False, tries=4):
+    """GET a REST path (relative to api.github.com). With paginate, returns the concatenated list."""
+    args = ["gh", "api", path]
+    if paginate:
+        args += ["--paginate", "--jq", ".[] | @json"]
+    err = ""
+    for i in range(tries):
+        try:
+            r = subprocess.run(args, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            err = f"timed out: gh api {path}"
+            time.sleep(3 * (i + 1))
+            continue
+        if r.returncode == 0:
+            if paginate:
+                return [json.loads(line) for line in r.stdout.splitlines() if line.strip()]
+            return json.loads(r.stdout) if r.stdout.strip() else None
+        err = (r.stderr or r.stdout).strip()
+        time.sleep(3 * (i + 1))
+    raise GhError(err[:300])
+
+
+def open_prs():
+    return api(f"repos/{REPO}/pulls?state=open&per_page=100", paginate=True)
+
+
+def skipped_by_label(pr):
+    return any(any(k in label["name"].lower() for k in DONT_MERGE) for label in pr.get("labels", []))
+
+
+def pr_detail(n):
+    """Single-PR REST payload; `mergeable` is computed lazily by GitHub, so retry while it's null."""
+    for _ in range(4):
+        d = api(f"repos/{REPO}/pulls/{n}")
+        if d.get("mergeable") is not None:
+            return d
+        time.sleep(3)
+    return d
+
+
+def mergeability(detail):
+    m = detail.get("mergeable")
+    return "MERGEABLE" if m is True else "CONFLICTING" if m is False else "UNKNOWN"
+
+
+def review_decision(n):
+    """APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED from each reviewer's latest decisive review."""
+    latest = {}
+    for r in api(f"repos/{REPO}/pulls/{n}/reviews?per_page=100", paginate=True):
+        if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
+            latest[r["user"]["login"]] = r["state"]
+    states = set(latest.values())
+    if "CHANGES_REQUESTED" in states:
+        return "CHANGES_REQUESTED"
+    return "APPROVED" if "APPROVED" in states else "REVIEW_REQUIRED"
+
+
+def summaries(n):
+    """Bodies of our "PR review summary" comments, oldest first."""
+    return [c["body"] for c in api(f"repos/{REPO}/issues/{n}/comments?per_page=100", paginate=True)
+            if c["user"]["login"] == ME and "PR review summary" in c["body"]]
+
+
+def review_threads(n):
+    """[(first comment id, resolved)] per review thread. Cloud sessions serve the `ccr` route;
+    elsewhere (a local gh login) that route doesn't exist, so fall back to GraphQL."""
+    try:
+        return [(t["comment_ids"][0], bool(t.get("resolved")))
+                for t in api(f"repos/{REPO}/pulls/{n}/ccr/review_threads", tries=1) or [] if t.get("comment_ids")]
+    except GhError:
+        owner, name = REPO.split("/")
+        q = ('query($n:Int!){repository(owner:"%s",name:"%s"){pullRequest(number:$n){reviewThreads(first:100)'
+             '{nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}' % (owner, name))
+        out = None
+        for i in range(4):
+            try:
+                r = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", "-F", f"n={n}"],
+                                   capture_output=True, text=True, timeout=120)
+            except subprocess.TimeoutExpired:
+                time.sleep(3 * (i + 1))
+                continue
+            if r.returncode == 0:
+                out = json.loads(r.stdout)
+                break
+            time.sleep(3 * (i + 1))
+        if out is None:
+            raise GhError(f"review threads for #{n}: neither ccr route nor GraphQL worked")
+        nodes = out["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+        return [(t["comments"]["nodes"][0]["databaseId"], t["isResolved"]) for t in nodes if t["comments"]["nodes"]]
+
+
+def unresolved_finding_threads(n):
+    """Number of our finding threads (first comment ours with a finding marker) that aren't resolved."""
+    comments = {c["id"]: c for c in api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)}
+    count = 0
+    for first_id, resolved in review_threads(n):
+        first = comments.get(first_id)
+        if first and not resolved and first["user"]["login"] == ME and "pre-pr-review:finding" in first["body"]:
+            count += 1
+    return count
+
+
+def ci_state(sha):
+    """(failed check names, pending count) for a commit, from check runs and legacy statuses."""
+    runs = []
+    page = 1
+    while True:
+        d = api(f"repos/{REPO}/commits/{sha}/check-runs?per_page=100&page={page}")
+        runs += d.get("check_runs", [])
+        if len(runs) >= d.get("total_count", 0) or not d.get("check_runs"):
+            break
+        page += 1
+    failed, pending = [], 0
+    for c in runs:
+        if c["status"] != "completed":
+            pending += 1
+        elif c["conclusion"] not in ("success", "skipped", "neutral"):
+            failed.append(c["name"])
+    for s in (api(f"repos/{REPO}/commits/{sha}/status") or {}).get("statuses", []):
+        if s["state"] == "pending":
+            pending += 1
+        elif s["state"] != "success":
+            failed.append(s["context"])
+    return failed, pending
