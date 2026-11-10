@@ -28,12 +28,12 @@ Per finished review: dry-run `python3 $TOOLS/skills/pre-pr-review/scripts/post_r
 `$TOOLS/skills/pre-pr-review/references/retrospective.md`, "Bugs found on main": one repro on current main, duplicate search (`gh api 'search/issues?q=repo:ballerina-nutcracker/ballerina+<words>'`), then file via `gh api repos/ballerina-nutcracker/ballerina/issues -f title=... -f body=... -f 'labels[]=triage' -f 'labels[]=Type/Bug'`. No bug hunting beyond what reviews found.
 
 ## 5. Report
-`cd $TOOLS/skills/pre-pr-review/scripts && python3 ready_table.py`. Replace the content of the Claude Doc **Nutcracker merge-ready PRs** (create it if missing) and print the same as your final message:
-1. Run time (Asia/Colombo), `origin/main` sha, tooling gaps.
-2. The merge-ready table and its "Not ready" line.
-3. This round's reviews: PR, verdict, new Important/Verify findings (one line each), summary link.
-4. Skipped PRs (conflicting, not checked) and filed issues.
-5. Review-skill updates proposed by agents (PRs that change AGENTS.md, skills, lint config, hooks or CI validators): list them for the user; don't apply them.
+Your final message is the report; it is what the user reads in the session, so make it complete and easy to scan (Markdown headings and tables, no doc or file needed):
+1. A one-line header: run time (Asia/Colombo), `origin/main` sha, tooling gaps.
+2. The output of `cd $TOOLS/skills/pre-pr-review/scripts && python3 ready_table.py`, pasted as is: the **Merge-ready** table and the **Not ready** table grouped by reason.
+3. **This round** table: PR | verdict | new Important/Verify findings (one line each) | summary link. Write "Nothing reviewed" if no PR needed review, and say why (e.g. all conflicting).
+4. **Skipped** (conflicting, not checked) and **Filed issues** as short lists.
+5. **Review-skill updates** proposed by agents (PRs that change AGENTS.md, skills, lint config, hooks or CI validators): list them for the user; don't apply them.
 
 ## Limits
 - If a usage limit stops you, stop cleanly: post nothing half-finished; report which PRs weren't reached. Never enable or rely on paid overage.

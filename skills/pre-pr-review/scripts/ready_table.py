@@ -39,32 +39,56 @@ def why_not_ready(p):
     return None
 
 
+# Order of the "Not ready" groups: what the PR author can act on first.
+GROUPS = ["open findings", "unresolved finding threads", "CI failed", "CI pending", "conflicting",
+          "not reviewed at current head", "mergeability unknown", "could not check"]
+
+
+def group_of(why):
+    return next((g for g in GROUPS if why.startswith(g)), why)
+
+
+def link(p):
+    return f"[#{p['number']}]({p['html_url']})"
+
+
 def main():
-    ready, blocked, unknown = [], [], []
+    ready, blocked = [], []
     for p in sorted(open_prs(), key=lambda p: p["number"]):
         if p["draft"] or skipped_by_label(p):
             continue
         try:
             why = why_not_ready(p)
             decision = review_decision(p["number"]) if why is None else ""
-        except GhError as e:
-            unknown.append((p["number"], str(e)))
+        except GhError:
+            blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
         if why:
-            blocked.append((p["number"], why))
+            blocked.append((p, why))
         else:
             ready.append((p, decision))
+
+    print(f"## Merge-ready ({len(ready)})\n")
     print("| PR | Title | Author | Approval | Reviewed |")
     print("|---|---|---|---|---|")
     for p, decision in ready:
-        print(f"| [#{p['number']}]({p['html_url']}) | {p['title'][:70]} | {p['user']['login']} | "
+        print(f"| {link(p)} | {p['title'][:70]} | {p['user']['login']} | "
               f"{decision.replace('_', ' ').lower()} | `{p['head']['sha'][:9]}` |")
     if not ready:
         print("| — | no merge-ready PRs | | | |")
+
     if blocked:
-        print("\nNot ready: " + "; ".join(f"#{n} {why}" for n, why in blocked))
-    if unknown:
-        print("\nCould not check (network): " + ", ".join(f"#{n}" for n, _ in unknown))
+        counts = {}
+        for _, why in blocked:
+            counts[group_of(why)] = counts.get(group_of(why), 0) + 1
+        order = {g: i for i, g in enumerate(GROUPS)}
+        blocked.sort(key=lambda b: (order.get(group_of(b[1]), len(GROUPS)), b[0]["number"]))
+        print(f"\n## Not ready ({len(blocked)})\n")
+        print(" · ".join(f"{g}: {n}" for g, n in sorted(counts.items(), key=lambda kv: order.get(kv[0], len(GROUPS)))))
+        print("\n| PR | Title | Author | Why |")
+        print("|---|---|---|---|")
+        for p, why in blocked:
+            print(f"| {link(p)} | {p['title'][:60]} | {p['user']['login']} | {why} |")
 
 
 if __name__ == "__main__":
