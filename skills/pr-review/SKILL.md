@@ -207,6 +207,7 @@ Not findings:
 - **Process-doc additions by maintainers.** A maintainer adding a review criterion or rule to `AGENTS.md` or `.agents/skills/**` alongside a feature is deliberate process work, not unrelated scope. Check that the text is accurate; don't ask for a separate PR (#978).
 - **Deliberately conservative restrictions.** A rejection or unsupported path that a nearby code comment explains, and whose root cause is an open tracked issue, is a known limitation, not a defect, e.g. rejecting a worker reference in a join collection because joins are lowered per frame (#1047). Raise it only if the explanation is wrong, or if the restriction is user-visible and `doc/lang/subset10.md` doesn't mention it.
 - **Spec-shaped code.** Code whose structure and variable names follow a spec algorithm or rule step by step is not a readability or simplification Nit, even if a shorter form exists (#1201). Raise it only if it deviates from the spec text.
+- **Explicit case lists.** Don't suggest replacing an explicit list of enum or sum-type cases in a `switch` with `default:`. Listing every case is deliberate, so a new value forces a decision at each switch (#1609).
 
 #### Security
 
@@ -232,7 +233,18 @@ LLM-written code fails in predictable ways that a local read of the diff misses.
 - **Data smuggled past accessors.** New AST fields or side tables used to pass data to a later stage instead of going through the stage's parameters, context or proper accessor.
 - **Global performance claims.** Local perf reasoning is fine; claims about whole-program cost must be measured (`compiler-tools` benchmark, a scaled probe), never guessed.
 
-Don't spend findings on what the linters already enforce (`make lint`: walkpurity, forbidigo no-panic and syntax-error sites, depguard allowlists, gochecknoglobals). When a finding could be caught by a deterministic check next time, list it as a lint candidate in the final message.
+Don't spend findings on what the linters already enforce (`make lint`: walkpurity, forbidigo no-panic and syntax-error sites, depguard allowlists, gochecknoglobals in `semantics`). Once module lint tiers are on main (#1612), they also cover:
+
+- Strict tier and above (`semtypes`, `common`, `decimal`, `prettyprint`, `runtime`, `values`, `ast`, `st`, `bir`, `model`, `birgen`, `desugar`, `nodebuilder`, `parser`, `context`, `semantics`): `modernize`, `exhaustive`, `gochecksumtype`, `dupl`, `iface`, `iotamixing`, `reassign`, `unparam`, `wastedassign`.
+- `nodebase` (no exported `*Base` types): `ast`, `st`, `bir`, `model`.
+- forbidigo no-panic: only `birgen`, `desugar`, `nodebuilder`, `parser`, `context`, `semantics`, `decimal`.
+
+Check a module's `.golangci.yml` for its tier before raising anything these cover. When a finding could be caught by a deterministic check next time, list it as a lint candidate in the final message.
+
+**Lint config PRs.** When a PR changes a module's tier, `.golangci*.yml` or `.golangci/*.yml`:
+
+- Run `make lint-configs` and `python3 .github/scripts/test_check_lint_configs.py`. A module moved to a looser tier is a finding unless the PR explains it.
+- Lint each module that moves to a stricter tier with the PR merged into current main (`make lint-module/<name>`): main's new code may trip the new linters even though the PR head is clean (#1612).
 
 #### Consistency with surrounding code
 
@@ -277,7 +289,7 @@ Record failures as blocking issues with command + excerpt.
 
 #### Data races
 
-`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel, stages 5–9 running concurrently across modules (`AGENTS.md`), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
+`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel, stages 1–2 and 5–10 running concurrently across modules (BIR generation pipelined per module; `AGENTS.md`), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
 
 Flag, with the two concurrent paths named:
 
@@ -326,6 +338,7 @@ It compares each new `.bal` under `corpus/bal`, `corpus/lib` and `corpus/project
 - Multi-file / multi-module behaviour goes in `corpus/project/`; parser and compiler recovery from source errors in `corpus/recovery/` (`.txtar` with `ast` and `stderr` goldens, run by `TestRecovery`).
 - Standard-library tests are `corpus/lib/subset<N>/<name>.bal` with their golden in `corpus/integration/lib/subset<N>/<name>.txtar` (currently `subset3`). The library subset is its own release track: don't infer it from the language subset, and a PR opening a new library subset needs the release decision called out.
 - No leading zeros in numeric filename parts (`call2-v.bal`, not `call02-v.bal`).
+- Once `make lint-corpus-names` is on main (#1188), it checks suffixes, leading zeros, the latest subset and directory naming for added corpus files. Don't raise those then; raise them only for renamed files, which the checker skips.
 
 **Skip lists.** When the PR adds, keeps or moves entries in `test_util/skip.go` (`UnsupportedTests`, `WASMUnsupportedTests`) or another test exclusion list, check every entry in the hunks it touches, not only the added lines (#1495):
 
@@ -336,9 +349,17 @@ It compares each new `.bal` under `corpus/bal`, `corpus/lib` and `corpus/project
 
 Re-run this check on every re-review, even when the skip list is unchanged: issues close between pushes.
 
+**Links to closed issues.** A PR that adds a link to a `ballerina-nutcracker/ballerina` issue that is already closed (in a TODO, skip list, workaround or test comment) is a Nit: the nightly stale-issue-reference job (#1630) will report it after merge. Check with `gh issue view N --json state`. A link to an `#issuecomment-` anchor is fine.
+
 **Golden drift.** Every changed golden must follow from the PR's change. Goldens for fixtures the PR didn't touch (unscoped `-update` run, non-deterministic ordering) are a nit to revert.
 
 **Langlib coverage docs.** A PR touching `lib/langlibs/ballerina/**`, `model/opaque.go` or `doc/langlib/**` must keep the generated `doc/langlib/README.md`, the module READMEs and the repo-root coverage summary in sync: `python3 .github/scripts/langlib_coverage.py --check` (the `Lang Library Coverage` CI check). Hand edits to generated files are a finding.
+
+**Stdlib coverage docs.** A PR touching `lib/stdlibs/**`, `doc/library/**` or the repo-root `README.md` coverage summary must keep the marked generated regions in sync: run `python3 .agents/skills/stdlib-readme-format/scripts/check_readmes.py --check` (plain `check_readmes.py` until #1625 adds `--check`). The fix for a failure is `--write`, not a hand edit. Rely on the checker for totals and tables; don't cross-check them by hand.
+
+**CI workflow PRs.** For a PR that adds or changes `.github/workflows/*.yml`, run `actionlint` (v1.7.12, with shellcheck) locally. Don't raise what actionlint reports: the `actionlint` CI check (#1623) does that.
+
+**Release scripts.** For a PR touching `.github/scripts/*release*` or `.github/workflows/*release*.yml`, run the `test_*release*.py` files in `.github/scripts/` (`test_nightly_release.py`, `test_release_dist.py`, `test_release_dist_tags.py` once #1624 lands). Probe tag collisions between tags cut on `main` and on `release-X.Y.x` branches: two jobs that can create the same `vX.Y.Z` fail one side (#1624).
 
 **Generated-file headers.** Before flagging a hand edit to a file whose header says `Code generated ... DO NOT EDIT`, find its generator (`//go:generate`, Makefile targets, `scripts/`, `.github/scripts/`). If it exists, the hand edit is the finding. If it no longer exists in the repo, the edit is fine and the Nit is the stale header: golangci-lint and reviewers skip files with that header, so hand-maintained code there goes unlinted (#1536).
 
