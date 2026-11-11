@@ -50,6 +50,8 @@ Confirm each difference with `bal run` (see the main skill's step 10) before rai
 - has its corpus `@output` that differs from jBallerina cite that issue in a comment;
 - isn't contradicted by a corpus test that still asserts the buggy jBallerina behaviour.
 
+Check the README side on its own as well, not only for the fixes you found: go through **every** bullet under the package README's Notable Behavioural Changes that the PR adds or edits (all of them for a new package). Each bullet that describes a jBallerina defect the port fixes, as opposed to an architectural Go constraint, needs a `ballerina-platform/ballerina-library` issue link (`stdlib-readme-format` checklist). List the unlinked bullets by title in one finding on the README.
+
 Conversely, a port that copies a jBallerina bug to keep outputs identical is a finding.
 
 ## 5. Compiler plugin (`compiler-plugin/.../*.java`)

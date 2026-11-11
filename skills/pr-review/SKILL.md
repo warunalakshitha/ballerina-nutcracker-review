@@ -112,6 +112,7 @@ For every non-merge commit on the PR:
    - Run: `python3 "$ROOT/.github/scripts/validate_commits.py" "<subject>"`
    - Also validate the **PR title** the same way
 2. **Atomic commits, no fixups** — each commit is one coherent change with its tests and docs. Flag any `fixup!` / `squash!` commit still on the PR (agent-authored fixups must be autosquashed before the PR; they must not land on `main`), and commits that mix unrelated changes
+   - A correction does not need a `fixup!` subject to be one. For each ordinary commit, check whether it corrects an earlier commit **on the same PR** by the same author: it touches the same files or symbols and its subject fixes, narrows, reverts or rewords what that commit added (e.g. `fix(x): reset the alias budget for each document` after `fix(x): bound nesting and aliases`; `docs(x): drop the trailing space…` after a `docs(x)` commit). Flag each as an unsquashed correction naming the target SHA (AGENTS.md: `git commit --fixup=<target>`, autosquash before merge). Commits made in reply to review findings, including ours, count. On a re-review, check the commits added since the last round.
 3. **No Co-authored-by** — fail any commit whose message contains `Co-authored-by:` (any co-author, including bots)
 4. **No AI agent author** — flag if author/committer name or email matches AI tooling, e.g.:
    - `cursor`, `copilot`, `chatgpt`, `openai`, `anthropic`, `claude`, `gemini`, `devtools@`, `noreply` AI bots
@@ -128,6 +129,14 @@ Report each violation with SHA + subject. When posting, commit, PR title and PR 
 For example, on #1187 the cross-build subtests already ran in parallel on main (each called `t.Parallel()`). Moving them under a parallel `TestBalCLI` wrapper didn't create the `rt/` build race, and the author correctly rejected the finding as out of scope.
 
 Findings the PR does introduce are still worth raising even if the author may reject them. A Nit the author declines is resolved with a reply.
+
+#### Boundary probes
+
+For each size, length, count or index the PR reads from a type or input, run the boundaries, not just the happy path:
+
+- Closed lists and tuples at length **0**, 1 and the declared length, and input that is shorter and longer than the type, each with projection (or the equivalent option) on and off.
+- Empty collections, empty strings and empty documents as input and as output.
+- Every guard like `n > 0`, `len(x) >= 1` or `size != -1` is a candidate bug: find what happens to the excluded value (here `0`) and check it against jBallerina. Example (#1422): `rowShapeOf` recorded a closed array's size only when `FixedLength() > 0`, so `int[0]` from `[1]` became an open array of `never` and failed instead of projecting to `[]`.
 
 #### Root-cause design checks
 
