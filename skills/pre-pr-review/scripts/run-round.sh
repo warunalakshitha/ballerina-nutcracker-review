@@ -44,7 +44,7 @@ echo
 echo "Report saved: $report"
 
 # Keep a copy of the latest report in this repo (from the report heading on, without progress chatter).
-# Left uncommitted; the user commits it.
+# reports/ is git-ignored, so the copy stays local.
 mkdir -p "$TOOLS/reports"
 if grep -q '^# ' "$report"; then
   sed -n '/^# /,$p' "$report" > "$TOOLS/reports/latest.md"
