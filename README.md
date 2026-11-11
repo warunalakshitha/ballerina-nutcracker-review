@@ -1,6 +1,6 @@
 # ballerina-nutcracker-review
 
-PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina), used by the scheduled Claude Code cloud routine and by local review rounds.
+PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina), used for local review rounds (`skills/pre-pr-review/scripts/run-round.sh`).
 
 - `skills/pr-review/`: the review checklist (`SKILL.md`) and companion checklists.
 - `skills/pre-pr-review/`: agent rules (`references/agent-instructions.md`), the round procedure (`references/routine.md`), the posting format and scripts.
