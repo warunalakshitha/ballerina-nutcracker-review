@@ -46,7 +46,7 @@ Confirm each difference with `bal run` (see the main skill's step 10) before rai
 
 **jBallerina bugs are fixed, not copied** (`add-stdlib-support` step 5). Where jBallerina contradicts its spec or API docs, or is clearly defective (data loss, races, silent overflow or truncation, unenforced limits, ignored inputs), the port implementing the correct behaviour is right, not a parity finding. Check instead that each such fix:
 
-- is listed under the package README's **Notable Behavioural Changes** (and mirrored in `doc/library/README.md`) with a real link to an existing or filed issue in `ballerina-platform/ballerina-library` — a missing or placeholder link is a finding;
+- is listed under the package README's **Notable Behavioural Changes** (the `doc/library/README.md` copy is generated; `check_readmes.py --check` keeps it in sync) with a real link to an existing or filed issue in `ballerina-platform/ballerina-library` — a missing or placeholder link is a finding;
 - has its corpus `@output` that differs from jBallerina cite that issue in a comment;
 - isn't contradicted by a corpus test that still asserts the buggy jBallerina behaviour.
 
@@ -66,7 +66,7 @@ Upstream compile-time rules, for example service validators for allowed remote m
 - **Typed errors:** for each `error` subtype a public function documents (`distinct` or not), find the native path that produces it and check it builds that type. A test like `r is mod:NotFoundError` must hold. A plain `NewErrorWithMessage` where a subtype is documented is a finding per error type.
 - **Externs:** named functions only. Types are built once in module init, not per call.
 - **Tests:** anything that needs no network or OS fixture goes in the open library subset `corpus/lib/subset<N>` (currently `subset3`; golden in `corpus/integration/lib/subset<N>`). Real sockets, servers, chmod or links go in `corpus/extern` with `.bal` fixtures and `t.Parallel()`. Challenge each Go test case (main skill). A new package with no test at all is a finding unless the PR defers it to a tracked task (see deferrals below).
-- **Docs:** a **new** package ships `lib/stdlibs/ballerina/<name>/0.0.1/go1.27/README.md` (support table + behavioural notes) and a row in the `doc/library/README.md` table with recomputed totals. For any package, the README, the `doc/library/README.md` section and totals, `doc/library/subset<N>.md`, and the repo-root `README.md` **Standard library coverage** summary (overall %, package count, totals, `**Supported packages:**` list) all agree.
+- **Docs:** a **new** package ships `lib/stdlibs/ballerina/<name>/0.0.1/go1.27/README.md` (support table + behavioural notes) and a row in the `doc/library/README.md` table with recomputed totals. For any package, run `python3 .agents/skills/stdlib-readme-format/scripts/check_readmes.py --check` (see **Stdlib coverage docs** in the main skill) instead of cross-checking the `doc/library/README.md` section and totals and the repo-root **Standard library coverage** summary by hand; a failure is a finding whose fix is `--write`. Still check `doc/library/subset<N>.md` by hand.
 - **Deferrals:** when the PR body or its parent issue's task list defers README, tests or compiler checks to a named later task or PR, that's a one-line summary note ("deferred to <task/issue>"), not a finding. Check the task exists. A deferral with no issue or task behind it is a finding.
 - **Sibling ports:** when several ports land together (tcp, udp, ldap), a bug class found in one is worth checking in the others.
 
