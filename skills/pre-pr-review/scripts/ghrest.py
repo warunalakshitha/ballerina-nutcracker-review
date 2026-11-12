@@ -78,11 +78,15 @@ def mergeability(detail):
     return "MERGEABLE" if m is True else "CONFLICTING" if m is False else "UNKNOWN"
 
 
-def review_decision(n):
-    """APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED from each reviewer's latest decisive review."""
+def review_decision(n, head):
+    """APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED from each reviewer's latest decisive review.
+    An approval counts only if it was given on `head`: after a push GitHub asks for review again,
+    so an approval of an older commit means the PR still needs review (#701, #1422, #1465)."""
     latest = {}
     for r in api(f"repos/{REPO}/pulls/{n}/reviews?per_page=100", paginate=True):
-        if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
+        if r["state"] == "APPROVED" and r.get("commit_id") != head:
+            latest[r["user"]["login"]] = "STALE"
+        elif r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
             latest[r["user"]["login"]] = r["state"]
     states = set(latest.values())
     if "CHANGES_REQUESTED" in states:

@@ -14,7 +14,7 @@ You coordinate one review round for ballerina-nutcracker/ballerina, unattended, 
 4. Tooling: `bal` (jBallerina) is on PATH, so run parity checks as the review skill says. Go comes from the repo's toolchain line. If `golangci-lint` is missing, say so in the report header and skip lint.
 
 ## 1. Scan
-`cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py` lists PRs needing review: `NEW` (no summary of ours) or `MOVED` (head differs from the commit our last summary reviewed). It skips drafts, approved PRs and don't-merge/dnm/hold/wip labels. `ERR`: retry once, then list as "not checked". A PR whose head equals the commit in our latest summary is already reviewed: skip it.
+`cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py` lists PRs needing review: `NEW` (no summary of ours) or `MOVED` (head differs from the commit our last summary reviewed). It skips drafts, PRs approved at their current head (an approval of an older commit still needs review) and don't-merge/dnm/hold/wip labels. `ERR`: retry once, then list as "not checked". A PR whose head equals the commit in our latest summary is already reviewed: skip it.
 
 ## 2. Review
 - Drop PRs that conflict with `$UPSTREAM/main` (`git -C $REPO merge-tree --write-tree $UPSTREAM/main refs/review/pr<N>`): no review, no comment; list as skipped.
@@ -31,10 +31,10 @@ Per finished review: dry-run `python3 $TOOLS/skills/pre-pr-review/scripts/post_r
 
 ## 5. Report
 Your final message is the report; it is what the user reads in the session, so make it complete and easy to scan (Markdown headings and tables, no doc or file needed):
-1. A one-line header: run time (Asia/Colombo), `$UPSTREAM/main` sha, tooling gaps.
-2. The output of `cd $TOOLS/skills/pre-pr-review/scripts && python3 ready_table.py`, pasted as is: the **Merge-ready** table and the **Not ready** table grouped by reason.
-3. **This round** table: PR | verdict | new Important/Verify findings (one line each) | summary link. Write "Nothing reviewed" if no PR needed review, and say why (e.g. all conflicting).
-4. **Skipped** (conflicting, not checked) and **Filed issues** as short lists.
+1. Title `# Review round · <STARTED>` using the `STARTED` date and time from the prompt (when the review started; if missing, the time you started), then one line: `$UPSTREAM/main` sha, end time, tooling gaps.
+2. The output of `cd $TOOLS/skills/pre-pr-review/scripts && python3 ready_table.py`, pasted as is: the **Open PRs** totals line (total, merge-ready, waiting for CI, not ready, drafts, held by label), the **Merge-ready** table, the **Waiting for CI** table (0 findings, only CI pending), and the **Not ready** table with the reason each PR isn't mergeable (both tables oldest PR first). Run it after posting so it reflects this round. If it fails, say so and list each open PR with its reason by hand.
+3. **This round** table, oldest PR first: PR | verdict | new Important/Verify findings (one line each) | summary link. Write "Nothing reviewed" if no PR needed review, and say why (e.g. all conflicting).
+4. **Skipped** (conflicting, not checked) and **Filed issues** as short lists, PR numbers in ascending order.
 5. **Review-skill updates** proposed by agents (PRs that change AGENTS.md, skills, lint config, hooks or CI validators): list them for the user; don't apply them.
 
 ## Limits
