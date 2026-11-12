@@ -21,12 +21,33 @@ JBALLERINA_SRC="${JBALLERINA_SRC:-$HOME/Dev/Git/ballerina-lang}"
 CLAUDE="${CLAUDE:-$HOME/.local/bin/claude}"
 export TOOLS REPO UPSTREAM SP JBALLERINA_SRC
 
-for cmd in "$CLAUDE" gh git go bal python3; do
+# wrk and hyperfine: compiler-tools benchmark tests fail without them (CI installs both).
+for cmd in "$CLAUDE" gh git go bal python3 wrk hyperfine; do
   command -v "$cmd" >/dev/null || { echo "missing: $cmd" >&2; exit 1; }
 done
 git -C "$REPO" remote get-url "$UPSTREAM" | grep -q 'ballerina-nutcracker/ballerina' \
   || { echo "$REPO remote $UPSTREAM is not ballerina-nutcracker/ballerina" >&2; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "gh is not logged in (gh auth login)" >&2; exit 1; }
+
+# Per-round state lives in $SP (except reports/) and in refs/review/* and refs/pr-stack/* of the clone; findings are
+# rebuilt from GitHub each round, so clear both before (a crashed round) and after every round.
+# Resolve $SP (symlinks, ..) before trusting it with rm -rf: it must be a real dir under /private/tmp.
+case "$SP" in *..*) echo "SP must not contain '..': $SP" >&2; exit 1 ;; esac
+mkdir -p "$SP"
+SP="$(cd "$SP" && pwd -P)"
+case "$SP" in /private/tmp/?*) ;; *) echo "SP must be under /private/tmp: $SP" >&2; exit 1 ;; esac
+export SP
+cleanup() {
+  git -C "$REPO" worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r w; do
+    case "$w" in "$SP"/wt/*|"${SP#/private}"/wt/*) git -C "$REPO" worktree remove --force "$w" || true ;; esac
+  done
+  git -C "$REPO" worktree prune
+  git -C "$REPO" for-each-ref --format='delete %(refname)' refs/review/ refs/pr-stack/ | git -C "$REPO" update-ref --stdin
+  [[ -d "$SP" ]] || return 0
+  find "$SP" -mindepth 1 -maxdepth 1 ! -name reports -exec rm -rf {} +
+}
+cleanup
+trap cleanup EXIT
 
 mkdir -p "$SP/review-out" "$SP/reports"
 START="$(TZ=Asia/Colombo date '+%Y-%m-%d %H:%M')"

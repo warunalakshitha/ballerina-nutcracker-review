@@ -55,8 +55,8 @@ five seconds and act on without scrolling.
   distinctive to say. Leave `summary.line` empty unless it says something
   the inline comments don't (e.g. on a clean PR: "Fix verified exhaustively.");
   never restate a finding. `summary.items` holds only PR-level notes with no
-  line to attach to (merge conflicts, perf numbers, commit problems): at most
-  5, ≤ 140 chars each. The script then adds `CodeRabbit: <n> of <m> threads
+  line to attach to (perf numbers, `Read line by line`, `Subset doc`): at most
+  5, ≤ 140 chars each. `summary.line` ≤ 160 chars. The script then adds `CodeRabbit: <n> of <m> threads
   unresolved.` whenever CodeRabbit opened review threads on the PR.
 
 The dry run prints a warning for each rule a finding breaks. Fix them before
@@ -72,13 +72,14 @@ Never inside the repo checkout: keep it in a temp/scratch directory. Shape: see
 | `head_sha` | PR head the review ran on; posting refuses if the PR moved (`--allow-moved-head` when only `main` was merged in and the diff hash is unchanged) |
 | `reviewed_diff`, `skill_version` | same values as the report frontmatter |
 | `findings[].id` | stable slug, unique in the PR; reruns match comments by it |
-| `severity` | `important`, `verify` or `nit` |
+| `severity` | `important` (confirmed defect), `verify` (a question for the author: intent or a design choice we can't settle, or a suspected bug we couldn't confirm; phrased as a question) or `nit` |
 | `kind` | short pass name shown in the prefix (`Test`, `Correctness`, `Comment`, …) |
 | `anchor` | `line` (default), `file` or `pr` |
 | `path`, `line`, `start_line` | RIGHT-side lines in the PR head; `start_line` for a range |
 | `code` | `{ "lang": "ballerina", "text": "…" }` or `null` |
 | `outputs` | `{ "jBallerina": "…", "Nutcracker": "…" }` or `null` |
 | `suggestion` | replacement text for `start_line..line`, `""` to delete, `null` for none |
+| `suggestion_lang` | optional language of a suggestion posted as a fenced block (file/PR-level findings); default `ballerina` |
 | `summary.line` | optional sentence; only when it adds something the inline comments don't |
 | `summary.items` | PR-level notes with no line to attach to. Never echo other reviewers' threads here; the script adds `CodeRabbit: <n> of <m> threads unresolved.` from the live thread state |
 | `summary.checked` | optional short list rendered as `Checked: a ✔ · b ✔` |

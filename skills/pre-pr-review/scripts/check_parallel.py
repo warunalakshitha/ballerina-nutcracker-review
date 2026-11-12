@@ -31,7 +31,7 @@ def changed_lines(base, path):
 def main():
     base = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
     mb = sh("git", "merge-base", "HEAD", base).strip()
-    files = [f for f in sh("git", "diff", "--name-only", "--diff-filter=AM", f"{mb}...HEAD", "--", "*_test.go").split() if f]
+    files = [f for f in sh("git", "diff", "--name-only", "--no-renames", "--diff-filter=AM", f"{mb}...HEAD", "--", "*_test.go").split() if f]
     hits = []
     for path in files:
         changed = changed_lines(mb, path)

@@ -1,9 +1,10 @@
 {
   "repo": "ballerina-nutcracker/ballerina",
-  "pr": 1002,
+  "pr": 1024,
   "head_sha": "e55b77619b88febb49e1d3bc1a2eeff5c97ce2af",
   "reviewed_diff": "7fa3d9a06f75678ab102ada167b56e777fbb065e3a74b2fe573990148cfb9c82",
-  "skill_version": "<sha256 of SKILL.md, same as review-report.md>",
+  "skill_version": "<sha256 of the review skill: pr-review/SKILL.md for open-PR rounds, see agent-instructions.md>",
+  "answered": [],
   "stack": {
     "prs": [
       1024,
@@ -31,7 +32,8 @@
       "jBallerina parity"
     ],
     "items": [
-      "Nutcracker doesn't check `new stream<T, C>(obj)` against `obj.next()`'s return type — worth an issue"
+      "Read line by line: semantics/internal/types/type_resolver.go",
+      "Subset doc: Not needed: tests only"
     ]
   },
   "findings": [

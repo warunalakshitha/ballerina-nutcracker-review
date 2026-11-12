@@ -70,7 +70,15 @@ Bullet list of blocking or important design issues. Empty section → write `Non
 |----------|------|------|-------|-------------------------|
 | blocking / nit | `path/to/file.go` | 123 | Short issue | 1–2 sentence comment to paste |
 
-Severity guide: `blocking` = must fix; `nit` = optional polish. Only concerns nobody has raised yet go here; see **Already raised**.
+Severity guide: `blocking` (posted as Important) = confirmed defect, must fix; `verify` = a question for the author (intent, an ambiguous rule, or a suspected bug not reproduced); `nit` = optional polish. Only concerns nobody has raised yet go here; see **Already raised**.
+
+## Pre-existing issues
+
+Problems that exist on the base too: repro, output at main, suggested issue. Or `None`.
+
+## Lint candidates
+
+Findings a deterministic check could catch next time. Or `None`.
 
 ## Already raised
 

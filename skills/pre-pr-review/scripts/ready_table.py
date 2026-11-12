@@ -49,6 +49,10 @@ def group_of(why):
     return next((g for g in GROUPS if why.startswith(g)), why)
 
 
+def title(p, width):
+    return p["title"][:width].replace("|", "\\|")
+
+
 def link(p):
     return f"[#{p['number']}]({p['html_url']})"
 
@@ -65,13 +69,14 @@ def main():
             continue
         try:
             why = why_not_ready(p)
-            decision = review_decision(p["number"], p["head"]["sha"]) if why is None else ""
+            waits = bool(why) and why.startswith("CI pending")
+            decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        if why and why.startswith("CI pending"):
+        if waits:
             # 0 findings, mergeable, reviewed at head: only CI is left, so it may be merge-ready soon.
-            waiting.append((p, why, review_decision(p["number"], p["head"]["sha"])))
+            waiting.append((p, why, decision))
         elif why:
             blocked.append((p, why))
         else:
@@ -84,7 +89,7 @@ def main():
     print("| PR | Title | Author | Approval | Reviewed |")
     print("|---|---|---|---|---|")
     for p, decision in ready:
-        print(f"| {link(p)} | {p['title'][:70]} | {p['user']['login']} | "
+        print(f"| {link(p)} | {title(p, 70)} | {p['user']['login']} | "
               f"{decision.replace('_', ' ').lower()} | `{p['head']['sha'][:9]}` |")
     if not ready:
         print("| — | no merge-ready PRs | | | |")
@@ -94,7 +99,7 @@ def main():
     print("| PR | Title | Author | Approval | CI |")
     print("|---|---|---|---|---|")
     for p, why, decision in waiting:
-        print(f"| {link(p)} | {p['title'][:70]} | {p['user']['login']} | "
+        print(f"| {link(p)} | {title(p, 70)} | {p['user']['login']} | "
               f"{decision.replace('_', ' ').lower()} | {why} |")
     if not waiting:
         print("| — | none | | | |")
@@ -109,7 +114,7 @@ def main():
         print("\n| PR | Title | Author | Why |")
         print("|---|---|---|---|")
         for p, why in blocked:
-            print(f"| {link(p)} | {p['title'][:60]} | {p['user']['login']} | {why} |")
+            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {why} |")
 
 
 if __name__ == "__main__":

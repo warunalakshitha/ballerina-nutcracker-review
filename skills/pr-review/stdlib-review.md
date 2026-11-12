@@ -8,9 +8,10 @@ For `ballerina/<name>`, the upstream repo is `ballerina-platform/module-ballerin
 
 ```bash
 M=module-ballerina-<name>
-gh api "repos/ballerina-platform/$M/git/trees/main?recursive=1" --jq '.tree[].path' \
+REF=<pinned tag, or the default branch>
+gh api "repos/ballerina-platform/$M/git/trees/$REF?recursive=1" --jq '.tree[].path' \
   | grep -E '^docs/spec/spec.md$|^ballerina/.*\.bal$|^native/src/main/java/.*\.java$|^compiler-plugin/src/main/java/.*\.java$' | grep -vi test
-gh api "repos/ballerina-platform/$M/contents/docs/spec/spec.md" --jq .content | base64 -d > $SP/<name>-spec.md
+gh api "repos/ballerina-platform/$M/contents/docs/spec/spec.md?ref=$REF" --jq .content | base64 -d > "$SP/<name>-spec.md"   # $SP: your scratch dir
 ```
 
 Fetch only the files a check needs. The spec, the public `.bal` files, and the Java class behind a native method are enough for most findings.
@@ -22,7 +23,7 @@ Go through every section of `docs/spec/spec.md` and give each one a status:
 - **Partial:** some parts are missing or behave differently. Name what.
 - **Not supported:** absent.
 
-Then cross-check the PR's package README coverage table and `doc/library/README.md`. Every Partial or Not-supported item must appear as Partially Supported or Not Supported, or under Notable Behavioural Changes. A row marked Supported that the spec walk found Partial is a finding (doc fact). Recompute the README counts and percentages.
+Then cross-check the PR's package README coverage table and `doc/library/README.md`. Every Partial or Not-supported item must appear as Partially Supported, Not Yet Supported or Cannot Support, or under Notable Behavioural Changes. A row marked Supported that the spec walk found Partial is a finding (doc fact). Leave counts and percentages to the checker (main skill, **Stdlib coverage docs**).
 
 ## 3. Public API parity (`ballerina/*.bal`)
 
@@ -32,7 +33,7 @@ Compare the PR's `.bal` with upstream:
 - function and method signatures (parameter names matter for named arguments), return types, `isolated`, `remote` and `resource` qualifiers;
 - enums, constants and annotations.
 
-A missing or changed public symbol needs a README note, or it's a finding.
+Run the contract extractor on both sides and diff them (`validate-stdlib-contract`): `go run ./.agents/skills/validate-stdlib-contract/cmd/extract-surface <dir>` on upstream `ballerina/` and on the port, then `diff -u`. Only a Not Yet Supported symbol may be absent. A missing Supported, Partially Supported or Cannot Support symbol (Cannot Support must still be declared and fail at runtime), a changed signature (parameter names count), or a new `public` symbol jBallerina lacks is blocking; a README note doesn't excuse it.
 
 ## 4. Behaviour vs the native implementation (`native/.../*.java`)
 
@@ -46,7 +47,7 @@ Confirm each difference with `bal run` (see the main skill's step 10) before rai
 
 **jBallerina bugs are fixed, not copied** (`add-stdlib-support` step 5). Where jBallerina contradicts its spec or API docs, or is clearly defective (data loss, races, silent overflow or truncation, unenforced limits, ignored inputs), the port implementing the correct behaviour is right, not a parity finding. Check instead that each such fix:
 
-- is listed under the package README's **Notable Behavioural Changes** (the `doc/library/README.md` copy is generated; `check_readmes.py --check` keeps it in sync) with a real link to an existing or filed issue in `ballerina-platform/ballerina-library` — a missing or placeholder link is a finding;
+- is listed under the package README's **Notable Behavioural Changes** (the checker keeps `doc/library/README.md` in sync) with a real link to an existing or filed issue in `ballerina-platform/ballerina-library` — a missing or placeholder link is a finding;
 - has its corpus `@output` that differs from jBallerina cite that issue in a comment;
 - isn't contradicted by a corpus test that still asserts the buggy jBallerina behaviour.
 
@@ -66,8 +67,10 @@ Upstream compile-time rules, for example service validators for allowed remote m
 - **Typed errors:** for each `error` subtype a public function documents (`distinct` or not), find the native path that produces it and check it builds that type. A test like `r is mod:NotFoundError` must hold. A plain `NewErrorWithMessage` where a subtype is documented is a finding per error type.
 - **Externs:** named functions only. Types are built once in module init, not per call.
 - **Tests:** anything that needs no network or OS fixture goes in the open library subset `corpus/lib/subset<N>` (currently `subset3`; golden in `corpus/integration/lib/subset<N>`). Real sockets, servers, chmod or links go in `corpus/extern` with `.bal` fixtures and `t.Parallel()`. Challenge each Go test case (main skill). A new package with no test at all is a finding unless the PR defers it to a tracked task (see deferrals below).
-- **Docs:** a **new** package ships `lib/stdlibs/ballerina/<name>/0.0.1/go1.27/README.md` (support table + behavioural notes) and a row in the `doc/library/README.md` table with recomputed totals. For any package, run `python3 .agents/skills/stdlib-readme-format/scripts/check_readmes.py --check` (see **Stdlib coverage docs** in the main skill) instead of cross-checking the `doc/library/README.md` section and totals and the repo-root **Standard library coverage** summary by hand; a failure is a finding whose fix is `--write`. Still check `doc/library/subset<N>.md` by hand.
+- **Docs:** a **new** package ships `lib/stdlibs/ballerina/<name>/0.0.1/go1.27/README.md` (support table + behavioural notes) and a row in the `doc/library/README.md` table with recomputed totals. For any package, rely on `check_readmes.py` as described under **Stdlib coverage docs** in the main skill instead of cross-checking totals by hand. Newly supported surface is documented in `doc/library/subset<N>.md` for the lib subset the tests use; a new lib subset adds `subset<N+1>.md`.
 - **Deferrals:** when the PR body or its parent issue's task list defers README, tests or compiler checks to a named later task or PR, that's a one-line summary note ("deferred to <task/issue>"), not a finding. Check the task exists. A deferral with no issue or task behind it is a finding.
+- **Wire-up (new package):** `lib/rt/libs.go` has the blank import when there is a `native/` directory; `test_util/testphases/phases.go` has a `builtinStdlibs` entry after the package's dependencies (root module before its sub-modules); `Dependencies.toml` declares every `import ballerina/<dep>`; a langlib import is in the `isLangImport` switch in `semantics/symbol_resolver.go` (`add-stdlib-support`). A gap-fill PR (`fill-stdlib-gap`) must not change `libs.go` or `phases.go`.
+- **Natives:** `*-v.bal` lib tests have empty stderr; no wrong-type extern argument guards (`x, _ := args[i].(T)`); never add fields to `values.Map` for native state; use `values.BalToGoJSON`/`GoToBalValue` instead of a per-module conversion; a new `go.mod` dependency states its license (GPL/AGPL/LGPL is a finding) and footprint (`add-stdlib-support`).
 - **Sibling ports:** when several ports land together (tcp, udp, ldap), a bug class found in one is worth checking in the others.
 
 Module-specific companions: [workflow-review.md](workflow-review.md) for `ballerina/workflow`.

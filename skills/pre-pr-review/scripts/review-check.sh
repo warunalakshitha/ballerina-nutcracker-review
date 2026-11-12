@@ -23,7 +23,7 @@ if [[ -z "$report" ]]; then
 fi
 issue_dir=$(dirname "$report")
 
-field() { grep -E "^$1:" "$report" | head -1 | sed -E "s/^$1:[[:space:]]*//; s/^sha256://; s/[[:space:]].*//"; }
+field() { { grep -E "^$1:" "$report" || true; } | head -1 | sed -E "s/^$1:[[:space:]]*//; s/^sha256://; s/[[:space:]].*//"; }
 
 # 2. Diff hash must match
 actual=$(git diff "$base"...HEAD -- . ':!docs/changes/' | sha256)
@@ -52,7 +52,8 @@ cov=$(field patch_coverage)
 if [[ -z "$cov" ]]; then
   echo "review-check: patch_coverage missing from $report." >&2; exit 1
 fi
-(( cov < 80 )) && echo "review-check: note — patch coverage ${cov}% is below the 80% target; reviewer to decide." >&2
+cov=${cov%%[.%]*}
+[[ "$cov" =~ ^[0-9]+$ ]] && (( cov < 80 )) && echo "review-check: note — patch coverage ${cov}% is below the 80% target; reviewer to decide." >&2
 
 # 5. Every changed .go/.bal/.py file appears in INTENT.md's change map (non-code files exempt)
 intent="$issue_dir/INTENT.md"

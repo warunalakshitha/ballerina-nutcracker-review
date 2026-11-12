@@ -59,7 +59,6 @@ A rule the PR claims but that has no `-e` test is a finding. A rule it doesn't c
 - Fallback: with no server reachable at the configured address, the runtime uses the in-memory engine, as #1477 describes. The probe goes through PAL networking and has a timeout.
 - Determinism: workflow code replays, so `ctx.sleep`, time, randomness and activity calls go through Temporal APIs. A direct Go clock or a random value inside workflow execution is a finding.
 - `balrt-workflow` is selected only when package resolution contains `ballerina/workflow`, and `bal`/`balrt` don't link the Temporal SDK (check with `go list -deps`). This is size-sensitive.
-- The `js/wasm` build still compiles (the Playground runs the in-memory engine).
 
 ## 7. Tests
 

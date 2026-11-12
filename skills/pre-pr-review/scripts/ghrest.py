@@ -95,9 +95,11 @@ def review_decision(n, head):
 
 
 def summaries(n):
-    """Bodies of our "PR review summary" comments, oldest first."""
-    return [c["body"] for c in api(f"repos/{REPO}/issues/{n}/comments?per_page=100", paginate=True)
+    """Bodies of our "PR review summary" comments, least recently updated first, so [-1] is the one
+    post_review.py edits (it updates the most recently updated summary)."""
+    ours = [c for c in api(f"repos/{REPO}/issues/{n}/comments?per_page=100", paginate=True)
             if c["user"]["login"] == ME and "PR review summary" in c["body"]]
+    return [c["body"] for c in sorted(ours, key=lambda c: c["updated_at"])]
 
 
 def review_threads(n):
@@ -108,24 +110,33 @@ def review_threads(n):
                 for t in api(f"repos/{REPO}/pulls/{n}/ccr/review_threads", tries=1) or [] if t.get("comment_ids")]
     except GhError:
         owner, name = REPO.split("/")
-        q = ('query($n:Int!){repository(owner:"%s",name:"%s"){pullRequest(number:$n){reviewThreads(first:100)'
-             '{nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}' % (owner, name))
-        out = None
-        for i in range(4):
-            try:
-                r = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", "-F", f"n={n}"],
-                                   capture_output=True, text=True, timeout=120)
-            except subprocess.TimeoutExpired:
+        q = ('query($n:Int!,$after:String){repository(owner:"%s",name:"%s"){pullRequest(number:$n)'
+             '{reviewThreads(first:100,after:$after){pageInfo{hasNextPage endCursor}'
+             'nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}' % (owner, name))
+        threads, after = [], None
+        while True:
+            out = None
+            args = ["gh", "api", "graphql", "-f", f"query={q}", "-F", f"n={n}"]
+            if after:
+                args += ["-f", f"after={after}"]
+            for i in range(4):
+                try:
+                    r = subprocess.run(args, capture_output=True, text=True, timeout=120)
+                except subprocess.TimeoutExpired:
+                    time.sleep(3 * (i + 1))
+                    continue
+                if r.returncode == 0:
+                    out = json.loads(r.stdout)
+                    break
                 time.sleep(3 * (i + 1))
-                continue
-            if r.returncode == 0:
-                out = json.loads(r.stdout)
-                break
-            time.sleep(3 * (i + 1))
-        if out is None:
-            raise GhError(f"review threads for #{n}: neither ccr route nor GraphQL worked")
-        nodes = out["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-        return [(t["comments"]["nodes"][0]["databaseId"], t["isResolved"]) for t in nodes if t["comments"]["nodes"]]
+            if out is None:
+                raise GhError(f"review threads for #{n}: neither ccr route nor GraphQL worked")
+            rt = out["data"]["repository"]["pullRequest"]["reviewThreads"]
+            threads += [(t["comments"]["nodes"][0]["databaseId"], t["isResolved"])
+                        for t in rt["nodes"] if t["comments"]["nodes"]]
+            if not rt["pageInfo"]["hasNextPage"]:
+                return threads
+            after = rt["pageInfo"]["endCursor"]
 
 
 def unresolved_finding_threads(n):
@@ -155,7 +166,10 @@ def ci_state(sha):
             pending += 1
         elif c["conclusion"] not in ("success", "skipped", "neutral"):
             failed.append(c["name"])
-    for s in (api(f"repos/{REPO}/commits/{sha}/status") or {}).get("statuses", []):
+    statuses = (api(f"repos/{REPO}/commits/{sha}/status?per_page=100") or {}).get("statuses", [])
+    if not runs and not statuses:
+        return [], 1  # no CI has started yet (just pushed, or a fork PR awaiting workflow approval)
+    for s in statuses:
         if s["state"] == "pending":
             pending += 1
         elif s["state"] != "success":
