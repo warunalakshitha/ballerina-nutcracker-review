@@ -207,7 +207,7 @@ For every non-merge commit on `$MB..HEAD`:
 ### 4. Hygiene
 
 - `make fmt` / `make lint` (or `golangci-lint run ./<affected>/...`) clean — fix, don't report.
-- License headers on new `.go` / `.bal` files (templates under `cli/templates/` are exempt).
+- License headers on new `.go` / `.bal` files match the hook exactly: run `python3 "$TOOLS/skills/pr-review/scripts/check_license_headers.py" <base>` (templates under `cli/templates/` are exempt). Fix them on your own branch; on an external PR, one PR-level Nit listing the files.
 - Team rule: every new/changed `TestXxx(t *testing.T)` and each `t.Run` subtest calls
   `t.Parallel()` — once at the top level and once per subtest, not only inside the
   subtests. Missing it is mechanical and local; add it and list under **Fixed during
