@@ -50,7 +50,7 @@ Review progress:
 - [ ] 3. Commits / authors / trailers
 - [ ] 4. Diff + design review (approach, root-cause design checks, security, agent failure modes, unnecessary / large comments)
 - [ ] 5. Go validation + data races (static review and `-race`)
-- [ ] 6. Unused / unneeded files, unused and test-only symbols, duplicate tests, test locations, skip-list entries (issue open + test still fails)
+- [ ] 6. Unused / unneeded files, unused and test-only symbols, license headers (`check_license_headers.py`), duplicate tests, test locations, skip-list entries (issue open + test still fails)
 - [ ] 7. Subset doc updated for support / restriction / deviation changes
 - [ ] 8. Codecov coverage gaps
 - [ ] 9. Prior review overlap (skip duplicates)
@@ -311,6 +311,14 @@ python3 "$TOOLS/skills/pr-review/scripts/check_unused_symbols.py" <base>
 ```
 
 It lists the funcs, methods, types, consts, vars and struct fields the PR adds that nothing references (`UNUSED`) or that only `_test.go` files reference (`TEST-ONLY`). No linter reports either (`unused` is disabled in every config). Read each hit before posting, because matching is by name: a common name can be hidden by an unrelated use (a field `DocumentURI` matches the type `workspace.DocumentURI`), and a symbol the PR description reserves for a follow-up is not dead. A `TEST-ONLY` symbol is a Nit to delete it, or to move it into the test file when only tests need it. A `GENERATED` line is one Nit on the generator's filter, not one per symbol.
+
+**License headers.** On every PR that adds `.go` or `.bal` files (fixtures included), run inside the PR worktree:
+
+```bash
+python3 "$TOOLS/skills/pr-review/scripts/check_license_headers.py" <base>
+```
+
+It compares the first lines of each added file with the `license_header` in `.githooks/commit-msg` at the base, exactly as the hook does (any year). CI doesn't run the hook, so a header variant passes CI and is rejected only on a contributor's machine. Don't judge headers by eye: a full WSO2 header with a missing `.` after `LLC`, different wrapping or one space before `See` still fails. Report every `MISMATCH` and `GENERATOR` hit together as **one PR-level Nit** (`"anchor": "pr"`) listing the files, never one finding per file. A `GENERATOR` hit (a script that writes the header into generated files) goes first in that list, since fixing only the outputs comes back on the next regeneration.
 
 **Duplicate tests.** On every PR that adds corpus tests, language or standard library, run:
 
