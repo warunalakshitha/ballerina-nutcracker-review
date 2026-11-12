@@ -25,6 +25,9 @@ def why_not_ready(p):
     body = bodies[-1] if bodies else ""
     shas = re.findall(r"reviewed `([0-9a-f]{7,40})", body)
     if not shas or not sha.startswith(shas[-1]):
+        # scan_prs.py skips PRs a human approved at this head, so say so instead of implying a miss.
+        if review_decision(n, sha) == "APPROVED":
+            return "approved at head; our review is older"
         return "not reviewed at current head"
     status = next((line for line in body.splitlines() if "reviewed `" in line), "")
     if not status.startswith("0 findings"):
@@ -42,7 +45,7 @@ def why_not_ready(p):
 
 # Order of the "Not ready" groups: what the PR author can act on first.
 GROUPS = ["open findings", "unresolved finding threads", "CI failed", "conflicting",
-          "not reviewed at current head", "mergeability unknown", "could not check"]
+          "not reviewed at current head", "approved at head; our review is older", "mergeability unknown", "could not check"]
 
 
 def group_of(why):
