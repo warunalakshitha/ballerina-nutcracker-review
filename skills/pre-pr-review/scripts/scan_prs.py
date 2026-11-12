@@ -1,5 +1,5 @@
 """List open PRs needing review: NEW (no summary of ours yet) or MOVED (head differs from the
-commit our last summary reviewed). Skips drafts, approved PRs and don't-merge/dnm/hold/wip labels.
+commit our last summary reviewed). Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
 Fetch failures print ERR, never NEW. REST only (works in Claude Code cloud sessions)."""
 import re
 
@@ -12,7 +12,7 @@ def main():
             continue
         n, sha = p["number"], p["head"]["sha"]
         try:
-            if review_decision(n) == "APPROVED":
+            if review_decision(n, p["head"]["sha"]) == "APPROVED":
                 continue
             bodies = summaries(n)
             merge = mergeability(pr_detail(n))

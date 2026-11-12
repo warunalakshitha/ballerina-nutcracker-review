@@ -28,7 +28,8 @@ def why_not_ready(p):
         return "not reviewed at current head"
     status = next((line for line in body.splitlines() if "reviewed `" in line), "")
     if not status.startswith("0 findings"):
-        return "open findings"
+        counts = re.findall(r"\*\*(\d+ [A-Za-z]+)\*\*", status)
+        return "open findings" + (": " + ", ".join(counts) if counts else "")
     if unresolved_finding_threads(n):
         return "unresolved finding threads"
     failed, pending = ci_state(sha)
@@ -40,7 +41,7 @@ def why_not_ready(p):
 
 
 # Order of the "Not ready" groups: what the PR author can act on first.
-GROUPS = ["open findings", "unresolved finding threads", "CI failed", "CI pending", "conflicting",
+GROUPS = ["open findings", "unresolved finding threads", "CI failed", "conflicting",
           "not reviewed at current head", "mergeability unknown", "could not check"]
 
 
@@ -53,21 +54,32 @@ def link(p):
 
 
 def main():
-    ready, blocked = [], []
-    for p in sorted(open_prs(), key=lambda p: p["number"]):
-        if p["draft"] or skipped_by_label(p):
+    ready, waiting, blocked, drafts, held = [], [], [], 0, 0
+    prs = sorted(open_prs(), key=lambda p: p["number"])
+    for p in prs:
+        if p["draft"]:
+            drafts += 1
+            continue
+        if skipped_by_label(p):
+            held += 1
             continue
         try:
             why = why_not_ready(p)
-            decision = review_decision(p["number"]) if why is None else ""
+            decision = review_decision(p["number"], p["head"]["sha"]) if why is None else ""
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        if why:
+        if why and why.startswith("CI pending"):
+            # 0 findings, mergeable, reviewed at head: only CI is left, so it may be merge-ready soon.
+            waiting.append((p, why, review_decision(p["number"], p["head"]["sha"])))
+        elif why:
             blocked.append((p, why))
         else:
             ready.append((p, decision))
 
+    print(f"**Open PRs: {len(prs)}** · merge-ready: {len(ready)} · waiting for CI: {len(waiting)}"
+          f" · not ready: {len(blocked)}"
+          f" · drafts: {drafts} · held by label (don't-merge/dnm/hold/wip): {held}\n")
     print(f"## Merge-ready ({len(ready)})\n")
     print("| PR | Title | Author | Approval | Reviewed |")
     print("|---|---|---|---|---|")
@@ -77,12 +89,21 @@ def main():
     if not ready:
         print("| — | no merge-ready PRs | | | |")
 
+    print(f"\n## Waiting for CI ({len(waiting)})\n")
+    print("0 findings, no conflicts, reviewed at the current head; merge-ready once CI passes.\n")
+    print("| PR | Title | Author | Approval | CI |")
+    print("|---|---|---|---|---|")
+    for p, why, decision in waiting:
+        print(f"| {link(p)} | {p['title'][:70]} | {p['user']['login']} | "
+              f"{decision.replace('_', ' ').lower()} | {why} |")
+    if not waiting:
+        print("| — | none | | | |")
+
     if blocked:
         counts = {}
         for _, why in blocked:
             counts[group_of(why)] = counts.get(group_of(why), 0) + 1
         order = {g: i for i, g in enumerate(GROUPS)}
-        blocked.sort(key=lambda b: (order.get(group_of(b[1]), len(GROUPS)), b[0]["number"]))
         print(f"\n## Not ready ({len(blocked)})\n")
         print(" · ".join(f"{g}: {n}" for g, n in sorted(counts.items(), key=lambda kv: order.get(kv[0], len(GROUPS)))))
         print("\n| PR | Title | Author | Why |")
