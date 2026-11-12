@@ -84,7 +84,7 @@ def main():
     opts = ap.parse_args()
 
     mb = sh("git", "merge-base", "HEAD", opts.base).strip()
-    added = [f for f in sh("git", "diff", "--name-only", "--diff-filter=A", f"{mb}...HEAD").split()
+    added = [f for f in sh("git", "diff", "--name-only", "--no-renames", "--diff-filter=A", f"{mb}...HEAD").split()
              if f.endswith(".bal") and f.startswith(ROOTS)]
     if not added:
         print("check_duplicate_tests: the PR adds no corpus .bal files")

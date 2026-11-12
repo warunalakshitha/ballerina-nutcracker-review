@@ -104,8 +104,8 @@ def commentable_lines(pr_files):
             if m:
                 line = int(m.group(1))
                 hunks.append(set())
-            elif row.startswith("-"):
-                continue
+            elif row.startswith("-") or row.startswith("\\"):
+                continue  # removed line, or "\ No newline at end of file" (not a file line)
             elif hunks:
                 hunks[-1].add(line)
                 line += 1
@@ -324,7 +324,9 @@ def main():
 
     plan = {"update": [], "new_line": [], "new_file": [], "resolve": []}
     moved = set()
-    current = {f["id"] for f, where in placed if where != "pr"}
+    # Every still-reported finding, including ones now placed in the summary: their old inline
+    # thread must not get "no longer reported" and be resolved.
+    current = {f["id"] for f, where in placed}
     for f, where in placed:
         if where == "pr":
             continue

@@ -91,7 +91,7 @@ Diagnostics must match the compiler: the set of errors published for a file equa
 
 ## 9. Large PRs
 
-When the LS diff is over ~5k lines, review it in one subagent per package (`ls/protocol`, `ls/server`, `ls/core/compile`, `ls/core/event`, `ls/core/workspace`, the host + harness + docs), run from a queue with at most ~3 concurrent, each given this file and the main checklist. Alongside them, run the section 5 end-to-end trace as its own subagent over all packages. Give the mechanical checks (`t.Parallel()`, license headers, `check_unused_symbols.py`, duplicate fixtures) to one more subagent, and tell the package subagents to skip them so they spend their time on behaviour. Merge their findings into one report and dedupe across packages before the prior-review overlap step.
+When the LS diff is over ~5k lines, review it in one subagent per package (`ls/protocol`, `ls/server`, `ls/core/compile`, `ls/core/event`, `ls/core/observability`, `ls/core/workspace`, `ls/cmd`, the host + harness + docs), run from a queue with at most ~3 concurrent, each given this file and the main checklist. Alongside them, run the section 5 end-to-end trace as its own subagent over all packages. Give the mechanical checks (`t.Parallel()`, license headers, `check_unused_symbols.py`, duplicate fixtures) to one more subagent, and tell the package subagents to skip them so they spend their time on behaviour. Merge their findings into one report and dedupe across packages before the prior-review overlap step.
 
 ## 10. Report additions
 

@@ -1,6 +1,6 @@
 # Review retrospective (coordinator, after each review round)
 
-The review skill improves only from its own misses. After a round's reviews are posted, collect what went wrong, turn each into a general rule or a lint, and prove the rule on a clean context before it lands.
+The review skill improves only from its own misses. Run this interactively, not inside run-round.sh, from the **Retrospective inputs** section of `reports/latest.md` (earlier rounds are in `git log -p reports/latest.md`). Collect what went wrong, turn each into a general rule or a lint, and prove the rule on a clean context before it lands.
 
 ## 1. Collect misses
 
@@ -9,7 +9,7 @@ From the PRs reviewed in the round (and replies since the previous round):
 - **Missed:** a concern a human or bot raised on code our review saw, that our review didn't find (agents report these under "other reviewers' threads"; also read human review comments added after our post).
 - **Wrong:** a finding of ours the author refuted with reasoning we accept, or that we withdrew.
 - **Wasted:** a finding on code that other reviewers then had removed, or a nit class the user keeps dismissing (e.g. `t.Parallel()` nits on unit tests later deleted in #1505/#1507).
-- **Recurring:** the same finding on two or more PRs. Prefer a lint for these.
+- **Recurring:** the same finding on two or more PRs, within a round or across rounds (`git log -p reports/latest.md`). Prefer a lint for these.
 
 Skip one-offs that depend on knowledge no rule can encode.
 

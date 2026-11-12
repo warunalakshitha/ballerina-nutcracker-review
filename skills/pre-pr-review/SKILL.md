@@ -178,12 +178,8 @@ reviewed head whether it is fixed (re-run its repro; an author's "Fixed with
   the same code is **not re-posted**. It goes under **Already raised (not
   re-posted)** in the report with who raised it, and whether it is still
   open at head. Still-open Important ones count toward `important:` — they
-  are real defects, only the comment is a duplicate. Every such concern that
-  is still open at head (any severity you'd have posted) also gets one
-  `summary.items` line, `Still open (raised by <login>): <what>`, so the PR
-  summary doesn't read as if it was missed (#1089: the subset1 tests were
-  caught but only Heshan's comment showed them). Write the login without `@`
-  so it doesn't notify anyone.
+  are real defects, only the comment is a duplicate. Don't echo it in `summary.items`;
+  the posting script reports the CodeRabbit thread count.
 - A prior concern that is still open at head but that you did not find
   yourself is a miss in this review: confirm it and list it the same way.
 - Fixed prior concerns are one Evidence row ("N prior concerns, M fixed at
@@ -214,12 +210,12 @@ For every non-merge commit on `$MB..HEAD`:
 - License headers on new `.go` / `.bal` files (templates under `cli/templates/` are exempt).
 - Team rule: every new/changed `TestXxx(t *testing.T)` and each `t.Run` subtest calls
   `t.Parallel()` — once at the top level and once per subtest, not only inside the
-- `check_parallel` hits on pre-existing tests whose `func` line is outside the diff (the PR only edits their body) go in one optional summary item listing them, not one Nit per test (#1078). Tests the PR adds, or whose top-level lines it changes, still get a Nit each.
   subtests. Missing it is mechanical and local; add it and list under **Fixed during
   review** (own branch) or **Nits (suggested, not applied)** (external PR). Always run
   `python3 .agents/skills/pre-pr-review/scripts/check_parallel.py <base>` — don't
   eyeball it; it lists every new or changed test and subtest without the call
   (review each hit: tests that mutate process-global state must stay serial).
+- `check_parallel` hits on pre-existing tests whose `func` line is outside the diff (the PR only edits their body) go in one optional summary item listing them, not one Nit per test (#1078). Tests the PR adds, or whose top-level lines it changes, still get a Nit each.
 - Comments: list every added comment line with
   `git diff -U0 <base>...HEAD -- '*.go' | grep -n '^+\s*//'` and judge each one
   against the rules below, struct field comments included — a manual review that
@@ -247,7 +243,7 @@ For every non-merge commit on `$MB..HEAD`:
   named function (e.g. `createType1Extern`), not an inline closure — one Nit per
   inline closure (#662). A closure that captures `rt` becomes a named function
   returning `extern.NativeFunc`, like `fromAvroExtern(types)`.
-- No duplicate corpus tests: run `python3 .agents/skills/pre-pr-review/scripts/check_duplicate_tests.py <base>`
+- No duplicate corpus tests: run `python3 "$TOOLS/skills/pr-review/scripts/check_duplicate_tests.py" <base>`
   (about 1 s for the whole corpus). It compares each new `.bal` under corpus/bal,
   corpus/lib and corpus/project with every existing one, ignoring the license,
   comments, markers and string contents. `EXACT` is a Nit to delete the copy;
@@ -586,8 +582,10 @@ the next developer if this merges as-is?"
   fixture with no behavior reason; (e) a team-rule violation whose consequence
   is a wrong result (e.g. a defensive check that masks a real invariant break
   on a reachable path).
-- **Verify** — a suspected divergence or bug you could not confirm (parity not
-  run, jBallerina source unclear). Listed with the exact program to run. Does
+- **Verify** — a question for the author: a suspected divergence or bug you
+  could not confirm (parity not run, jBallerina source unclear), or a point that
+  depends on intent or an ambiguous spec rule. Phrased as a question with the
+  observed behaviour, the options, and the exact program to run. Does
   **not** count toward `important:`; the developer confirms and it becomes
   Important or is dropped.
 - **Nit** — everything else: style, naming, clarity, missing `default:` on a
@@ -635,10 +633,5 @@ comments is in scope when the user asks (step 12) — it is not "opening a PR or
 posting to GitHub" in the sense `## Local-only` warns against; it is delivering
 this same review.
 
-The older `.agents/skills/pr-review/` (a separate, superseded skill living in
-a different checkout of this repo) predates `INTENT.md`/`review-report.md`
-and `patch_coverage.py`: it produces a chat-only report and leans on scraping
-Codecov/CodeRabbit bot comments instead of measuring coverage or running
-parity itself. Prefer this skill for reviewing an already-open PR too; only
-reach for that one if you specifically want the Codecov/CodeRabbit-comment
-angle it has and this one doesn't.
+For reviewing open PRs (including `run-round.sh` rounds), `skills/pr-review/SKILL.md`
+is the checklist; this file covers a developer's own unpushed branch.

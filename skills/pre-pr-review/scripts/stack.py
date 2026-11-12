@@ -22,7 +22,10 @@ import sys
 
 
 def run(*cmd, check=True):
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        sys.exit(f"{' '.join(cmd)} timed out after 300s")
     if check and r.returncode != 0:
         sys.exit(f"{' '.join(cmd)} failed:\n{r.stdout}{r.stderr}")
     return r
@@ -49,7 +52,10 @@ def open_prs(repo):
         batch = json.loads(out) if out.strip() else []
         prs += [{"number": p["number"], "title": p["title"], "headRefName": p["head"]["ref"],
                  "baseRefName": p["base"]["ref"], "headRefOid": p["head"]["sha"],
-                 "baseRefOid": p["base"]["sha"], "isDraft": p["draft"]} for p in batch]
+                 "baseRefOid": p["base"]["sha"], "isDraft": p["draft"],
+                 # A stack's lower PR has its head branch in the repo itself; fork branches named like
+                 # repo branches (often `main`) are not stack members.
+                 "inRepo": ((p["head"].get("repo") or {}).get("full_name") == repo)} for p in batch]
         if len(batch) < 100:
             return prs
         page += 1
@@ -59,7 +65,7 @@ def build_stack(prs, number, default_branch, tip):
     by_num = {p["number"]: p for p in prs}
     if number not in by_num:
         sys.exit(f"#{number} is not an open PR")
-    by_head = {p["headRefName"]: p for p in prs}
+    by_head = {p["headRefName"]: p for p in prs if p["inRepo"]}
     down, cur, notes = [], by_num[number], []
     while True:
         down.append(cur)
@@ -73,7 +79,7 @@ def build_stack(prs, number, default_branch, tip):
     stack = list(reversed(down))
     cur = by_num[number]
     while True:
-        children = [p for p in prs if p["baseRefName"] == cur["headRefName"]]
+        children = [p for p in prs if cur["inRepo"] and p["baseRefName"] == cur["headRefName"]]
         if not children:
             break
         if len(children) > 1:
