@@ -15,6 +15,22 @@ Use this in addition to the main checklist when a PR adds or changes code under 
 
 Compiler files the PR also touches (`projects/`, `semantics/`, `context/`, …) get the full main checklist, including a check that `go run ./cli/cmd run` behaviour is unchanged on the corpus.
 
+### Rules from the other checklists that apply to LS PRs
+
+Only the main checklist's `bal run` parity step is replaced. Everything else in `SKILL.md` applies as written, including commit and PR-body checks, the representation-change and design-finding rules, Go-test challenges, unused symbols, comment size and license headers. These rules from [stdlib-review.md](stdlib-review.md) and [workflow-review.md](workflow-review.md) also apply, adapted:
+
+| Source rule | LS form |
+|---|---|
+| stdlib §2 spec walk (Implemented / Partial / Not supported, verified with a program) | Walk the PR body's claims (provider or context table, "supports X") the same way, each verified with a fixture or harness run (section 6). |
+| workflow §1 scope against the task list | When the PR names a parent issue (e.g. #1535), compare the diff with the issue's task list: each ticked task is implemented, and unticked ones aren't claimed in the PR body. |
+| stdlib §6 / workflow §2 panic isolation | A panic in a feature provider, AST walk or handler must not kill the server. Find where requests are dispatched and check each runs under a `recover` that turns a panic into `InternalError` (-32603) for that request only. Probe with an input that reaches a nil node (a recovered or empty AST). |
+| stdlib §6 blocking externs yield / workflow no bare waits | Every wait in a request handler (for a compile, a generation, a lock) selects on the request's `ctx`, so `$/cancelRequest` and `shutdown` end it. |
+| workflow §2 no `time.Sleep`/`time.Now`, time via PAL | Debounce and timeouts go through an injectable clock or option, so tests don't sleep. A test that sleeps to wait for a compile is a finding. |
+| workflow §4 negative inputs must not cause unbounded waits | Negative, huge (`4294967295`) and missing positions, versions and ids: a protocol error or a clamp, never a stall or panic (#1543). |
+| stdlib §6 typed errors | Each failure path returns the LSP error code the spec names (`InvalidParams`, `RequestCancelled`, `ContentModified`, `ServerNotInitialized`), not a successful `null`. |
+| stdlib §6 deferrals | When the PR body or parent issue defers something to a named later PR or issue, that's a one-line summary note, not a finding (section 6 scope rule). |
+| stdlib §6 sibling ports | LS features share helpers and habits (cursor scanning, comment and trivia skipping, import lookup, request decoding). A bug class found in one feature package is checked in the PR's other feature packages and in the ones already on main. Mention a hit in another open LS PR in the final message, not as a finding here. |
+
 ## 2. Layering (`ls/AGENTS.md`)
 
 - `ls/protocol` imports no compiler package and no other `ls/` package.
@@ -29,7 +45,8 @@ Compiler files the PR also touches (`projects/`, `semantics/`, `context/`, …) 
 Check each against the LSP 3.18 spec and probe it with a fixture or the nvim harness (`compiler-tools/ls-nvim-harness/`):
 
 - **Lifecycle:** requests before `initialize` return `ServerNotInitialized` (-32002); a second `initialize` is rejected; after `shutdown`, requests return `InvalidRequest`; `exit` exits 0 after `shutdown` and 1 without it.
-- **JSON-RPC:** ids work as both numbers and strings; notifications never get a response; unknown requests return `MethodNotFound`, unknown notifications (and any `$/` notification) are ignored; malformed JSON returns `ParseError`; a duplicate in-flight id is rejected.
+- **JSON-RPC:** ids work as both numbers and strings; notifications never get a response; unknown requests return `MethodNotFound`, unknown notifications (and any `$/` notification) are ignored; malformed JSON returns `ParseError`; a duplicate in-flight id is rejected; params that don't decode or miss a required field (a negative position, no `textDocument`) return `InvalidParams` (-32602), not a successful `null`.
+- **Spec defaults:** when the PR invents a fallback for a client that lacks a capability (a sentinel value, an omitted field), check the spec's default rule for that field. Raise it only with a measured client-visible difference (a wrong highlight, a dropped field, an error in the nvim harness); a fallback that merely restates the spec default (e.g. an out-of-range `activeParameter`, which the spec also treats as 0) with no demonstrated failure is not a finding, not even a Nit.
 - **Cancellation:** `$/cancelRequest` produces exactly one response (`RequestCancelled`, -32800) or the normal result if it already finished; cancelling an unknown or finished id is a no-op.
 - **Framing:** `Content-Length` counts bytes, not runes; a missing or bad header is handled without a panic; partial reads across buffer boundaries.
 - **Capabilities:** the server only advertises what it implements, and honours client capabilities it depends on (position encoding, `didChangeWatchedFiles` dynamic registration, pull vs push diagnostics).
@@ -66,6 +83,25 @@ go build ./...
 
 For completion, hover, signature help, diagnostics, go-to-definition and similar features, read the matching provider in `$JBALLERINA_SRC/language-server/modules/langserver-core/` and its test configs (`src/test/resources/<feature>/`). Pick a handful of the jBallerina test cases that fall inside Nutcracker's supported subset and run them as fixtures. A divergence is a finding only if the PR doesn't document it as a non-goal; apply the spec-over-jBallerina rule for wire behaviour.
 
+**Probe what the PR claims, nothing more.** Turn each supported context the PR body lists (e.g. a provider table row: "after `mod:` in a type descriptor", "auto-import edit") into a few fixtures that vary the input the claim covers: import forms (plain, `as alias`, dotted module names, two imports), nesting (top level vs inside `record {| |}`, `object {}`, a union, parentheses), and a comment or line break in the middle. Also vary:
+
+- **Where the callee or symbol lives:** same file, another file of the same module, a sibling module of the same package, an external dependency, and a langlib or stdlib module (`io:println`, `arr.push`). Docs and labels often work only for the first.
+- **Receiver and callee shape:** a class, an object union (`A|B` with the same method), a function-typed variable, a remote method, `new` with an inferred type.
+- **Cursor boundaries:** for each argument form (positional, named, rest), put the cursor at the start of the name, before and after `=`, at the start and end of the value, and just before and after each comma.
+- **Compile stage:** run each case on a module that type-checks and on one with an unrelated error elsewhere, since syntax-only and typed paths often give different answers.
+
+Report a failure only when it falls inside a claimed context:
+
+- In scope: the PR claims the context and the feature returns wrong results there (missing items, items for the wrong context, a duplicate or wrong edit). A handler that takes the cursor and answers wrongly counts, even when the PR never names that exact variant (e.g. a record field type is part of "in a type descriptor").
+- Out of scope, not reported: contexts the PR lists as not yet supported or a later PR, and contexts no provider claims where the feature correctly returns nothing. Don't post these, not even as `verify`. Mention them only in the final message if they look like a trap for the follow-up PR.
+- If a variant can't be placed in or out of a claim from the PR body, post one `verify` question asking whether it is meant to be supported.
+
+**Read the output as a user sees it.** Goldens pass by definition, so read them. Render each Markdown string the PR produces (labels, parameter docs, descriptions) and check spacing between parts (`` `int` a``, not `` `int`a``), that fenced code blocks and line breaks in doc comments survive, and that type names are readable: a type the compiler expands in full (`nil|boolean|int|…`) where jBallerina prints the source form (`any|error`) is a finding. Do this for at least one stdlib callee with real docs, not only fixtures written for the PR.
+
+**Drive the real server.** Run the PR's claims table through the built `bal start-language-server` over stdio (or the nvim harness), not only the in-process corpus client, including a request sent right after `didChange` as trigger characters would send it.
+
+**Text heuristics in place of parsed data.** When feature code re-derives something the compiler already holds (matching `import` lines as strings, counting `{` depth, scanning tokens with regexes rather than reading the AST or the file's parsed imports), probe that code with aliases, comments, nesting and unusual formatting inside the claimed contexts. If the PR body says it works from the AST but the code scans text, raise that as a design finding backed by one of these repros.
+
 Diagnostics must match the compiler: the set of errors published for a file equals what `go run ./cli/cmd run` reports for it (same lines, same count), and a file with no errors gets an empty `publishDiagnostics`, not none.
 
 ## 7. Tests and fixtures
@@ -73,6 +109,8 @@ Diagnostics must match the compiler: the set of errors published for a file equa
 - Fixtures follow `ls/AGENTS.md` and the `manage-ls-fixtures` skill: `ls/corpus/<feature>/testdata/<scenario>.json` (transcript `messages` + golden `expected`), with an optional `.bal` named by the transcript's `source` field; one behaviour per scenario, named for the behaviour (not numbered).
 - Golden updates are scoped (`go test ./ls/corpus -run 'TestCorpus/<feature>/testdata/<scenario>.json' -update`); changed goldens for scenarios the PR didn't touch are drift to revert.
 - The PR passes the three gates: `go test ./ls/...`, `go build ./...`, `go vet ./ls/...`.
+- A fixture tests what its name says: for each fixture named after a capability, client setting or format (`docs-format-plaintext-first`, `capability`), check that the harness actually sends that setting. A harness that runs every config through one client with fixed capabilities makes those fixtures duplicates of each other.
+- Dev tools the PR adds (`compiler-tools/ls-nvim-harness/`, probe scripts, README setup steps) are run, not only read: a path with a space and a `'`, an empty argument where the tool accepts one (empty replacement text), a falsy result (`false`, `0`, `""`) passing through, and the README steps followed from a clean build (every binary it needs is listed).
 - Goldens must not be hand-edited to pass; a golden that encodes wrong behaviour (e.g. a stale diagnostic, a wrong range) is a finding on the server code.
 - Tests use the injected filesystem and temp directories; a test reading the real repo tree outside its `testdata/` is a finding.
 - Platform-specific tests (`*_windows_test.go`) are built with a matching build tag and run in CI on that platform.
@@ -91,7 +129,7 @@ Diagnostics must match the compiler: the set of errors published for a file equa
 
 ## 9. Large PRs
 
-When the LS diff is over ~5k lines, review it in one subagent per package (`ls/protocol`, `ls/server`, `ls/core/compile`, `ls/core/event`, `ls/core/observability`, `ls/core/workspace`, `ls/cmd`, the host + harness + docs), run from a queue with at most ~3 concurrent, each given this file and the main checklist. Alongside them, run the section 5 end-to-end trace as its own subagent over all packages. Give the mechanical checks (`t.Parallel()`, license headers, `check_unused_symbols.py`, duplicate fixtures) to one more subagent, and tell the package subagents to skip them so they spend their time on behaviour. Merge their findings into one report and dedupe across packages before the prior-review overlap step.
+When the LS diff is over ~5k lines, review it in one subagent per package (`ls/protocol`, `ls/server`, `ls/core/compile`, `ls/core/event`, `ls/core/observability`, `ls/core/workspace`, `ls/cmd`, each feature package such as `ls/core/completion`, the host + harness + docs; list the packages from `git diff --name-only` rather than from this list, so a new package always gets its own subagent), run from a queue with at most ~3 concurrent, each given this file (including the borrowed rules in section 1) and the main checklist. Alongside them, run the section 5 end-to-end trace as its own subagent over all packages. Give the mechanical checks (`t.Parallel()`, `check_license_headers.py`, `check_unused_symbols.py`, duplicate fixtures) to one more subagent, and tell the package subagents to skip them so they spend their time on behaviour. Merge their findings into one report and dedupe across packages before the prior-review overlap step.
 
 ## 10. Report additions
 

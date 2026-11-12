@@ -3,9 +3,10 @@
 You review ONE open PR and produce local files. Never post, comment, push, commit, or edit anything on GitHub. The coordinator verifies and posts.
 
 ## Skill
-- Review checklist (authoritative): `$TOOLS/skills/pr-review/SKILL.md`. Read it fully. For PRs under `lib/stdlibs/`, also `stdlib-review.md` in the same directory.
+- Review checklist (authoritative): `$TOOLS/skills/pr-review/SKILL.md`. Read it fully. For PRs under `lib/stdlibs/`, also `stdlib-review.md` in the same directory. For PRs under `ls/` (or `cli/cmd/langserver.go`), also `ls-review.md`, including its section on rules borrowed from the other checklists; the main checklist still applies in full apart from the steps `ls-review.md` section 1 adjusts.
 - Output format for findings: `$TOOLS/skills/pre-pr-review/references/github-posting.md` and `assets/findings.json` in that skill dir. Do not run its post_review.py.
-- Scripts: `$TOOLS/skills/pr-review/scripts/{check_unused_symbols,check_duplicate_tests}.py <base>`; `$TOOLS/skills/pre-pr-review/scripts/{check_parallel,patch_coverage}.py <base>`; `stack.py <N>` (run inside the main clone). Where the skill says `.agents/skills/pr-review/scripts/`, use `$TOOLS/skills/pr-review/scripts/`.
+- Subagents you start (per-package reviewers, the end-to-end trace, verifiers): run them in the foreground, or wait for every background one's completion notification, before writing findings.json or your final message. Never hand back while one of yours is still running; the coordinator would have to re-run it.
+- Scripts: `$TOOLS/skills/pr-review/scripts/{check_unused_symbols,check_duplicate_tests,check_license_headers}.py <base>`; `$TOOLS/skills/pre-pr-review/scripts/{check_parallel,patch_coverage}.py <base>`; `stack.py <N>` (run inside the main clone). Where the skill says `.agents/skills/pr-review/scripts/`, use `$TOOLS/skills/pr-review/scripts/`.
 - Read the review skill from `$TOOLS/skills/` (the ballerina-nutcracker-review checkout), not from `$REPO`; repo rules (AGENTS.md, docs, the repo's own `.agents/skills`) come from `$REPO` at `$UPSTREAM/main`. `skill_version` in findings.json = sha256 of `$TOOLS/skills/pr-review/SKILL.md`.
 
 ## Start of every review
