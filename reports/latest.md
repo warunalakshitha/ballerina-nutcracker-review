@@ -1,4 +1,4 @@
-# Review round · 2026-11-13 16:03 Asia/Colombo
+# Review round · 2026-11-13 16:03
 
 `pr730remote/main` at `d69c341a5` · ended 2026-11-13 16:31 · no tooling gaps (`bal` and `golangci-lint` both present)
 
