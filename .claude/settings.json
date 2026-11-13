@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude-code-remote__add_repo",
+      "mcp__claude-code-remote__check_repo_access",
+      "mcp__claude-code-remote__register_repo_root",
+      "Bash(gh api:*)",
+      "Bash(git:*)",
+      "Bash(python3:*)",
+      "Bash(go:*)",
+      "Bash(bal:*)",
+      "Bash(golangci-lint:*)",
+      "Bash(actionlint:*)",
+      "Bash(shellcheck:*)",
+      "Bash(wrk:*)",
+      "Bash(hyperfine:*)",
+      "Bash(make:*)",
+      "Bash(curl:*)",
+      "Bash(apt-get:*)",
+      "Bash(dpkg:*)",
+      "Bash(timeout:*)",
+      "Bash(GIT_LFS_SKIP_SMUDGE=1 git clone:*)",
+      "Bash(GOBIN=/usr/local/bin go install:*)",
+      "Bash(mkdir:*)",
+      "Bash(tar:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(find /tmp/review-sp:*)",
+      "Bash(rm -rf /tmp/review-sp/:*)",
+      "Bash(kill:*)",
+      "Bash(ps:*)"
+    ]
+  }
+}
