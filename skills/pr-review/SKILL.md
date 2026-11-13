@@ -286,11 +286,14 @@ Flag, with the two concurrent paths named:
 
 - New or changed package-level variables, caches and registries (including lazy init and `sync.Once` whose result is later mutated) written after startup
 - Plain maps/slices shared across modules or strands without a lock (`sync.Map`, a mutex, or ownership by one goroutine); check-then-act sequences (lookup then insert) even when each step is locked
+- Check-then-act in Ballerina code: a `.bal` method that calls two externs with a decision in between (`if !self.hasKey(k) { return error } externRemove(k)`) races across strands even when each extern locks. Ask for one native call that checks and acts. Matching jBallerina's identical code is not an excuse (#1437: two concurrent `invalidate` calls both succeeded)
 - Mutations of compiler-context, environment or type-env state from per-module stages, and of `values` (maps, lists, objects) from runtime code without the existing locking
 - Swapping a global for the duration of a call (save / set / restore), e.g. debug flags or writers
 - Test helpers that mutate process-global state (env vars, cwd, globals) in a test that calls `t.Parallel()`
 
-For each suspect, try to reproduce: run the affected tests with `go test -race -count=5` (add `-tags debug` when the code is debug-only), or write a small corpus program that drives both paths (several modules, `start`/workers). A reproduced race is **blocking**; an unreproduced but plausible one is a finding with the interleaving spelled out. A race that already exists on main goes under pre-existing issues.
+For each suspect, try to reproduce: run the affected tests with `go test -race -count=10` (add `-tags debug` when the code is debug-only), or write a small corpus program that drives both paths many times (several modules, `start`/workers, a loop of a few thousand rounds counting bad outcomes). A reproduced race is **blocking**; an unreproduced but plausible one is a finding with the interleaving spelled out. A race that already exists on main goes under pre-existing issues.
+
+A race is gone only when `-count=10` or more passes at the current head. A shorter clean run, by you or the author, doesn't close it (#1446: `-count=5` passed, `-count=10` failed 6 tests). When the cause is an open runtime issue but the PR's own tests trigger it, the finding stays open with that issue linked: the PR adds tests that make `make test-race` flaky.
 
 ### 6. Unused / unneeded files
 
