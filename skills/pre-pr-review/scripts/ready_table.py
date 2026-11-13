@@ -1,9 +1,10 @@
-"""Print a Markdown table of merge-ready PRs in ballerina-nutcracker/ballerina.
+"""Print two Markdown tables of open PRs in ballerina-nutcracker/ballerina: Can merge and Cannot merge (with why).
 
-A PR is merge-ready when all of these hold:
+A PR can merge when all of these hold:
 - open, not a draft, no don't-merge/dnm/hold/wip label
 - GitHub reports it mergeable (no conflicts)
-- every CI check on the head passed (skipped/neutral count as passed; pending or failed do not)
+- based on the default branch (a stacked PR waits for the PR below it)
+- no CI check on the head failed (skipped/neutral count as passed; pending ones show as "after CI pending")
 - our latest "PR review summary" reviewed the current head and reports 0 findings
 - none of our finding threads is unresolved
 
@@ -71,6 +72,11 @@ def why_not_ready(p, by_head):
     failed, pending = ci_state(sha)
     if failed:
         return "CI failed: " + ", ".join(failed[:3])
+    base = p["base"]["ref"]
+    if base != p["base"]["repo"]["default_branch"]:
+        # Clean, but it lands only after the PR below it in the stack merges.
+        q = by_head.get(base)
+        return stack_blocker(p, by_head) or (f"stacked: merge #{q['number']} first" if q else f"stacked on `{base}`")
     if pending:
         return f"CI pending ({pending})"
     return None
@@ -78,7 +84,7 @@ def why_not_ready(p, by_head):
 
 # Order of the "Not ready" groups: what the PR author can act on first.
 GROUPS = ["open findings", "unresolved finding threads", "CI failed", "conflicting", "stacked on conflicting",
-          "base #", "base branch", "awaiting re-review", "awaiting first review",
+          "base #", "base branch", "stacked", "awaiting re-review", "awaiting first review",
           "approved at head; our review is older", "mergeability unknown", "could not check"]
 GROUP_NAMES = {"base #": "base already merged", "base branch": "base branch has no open PR"}
 
@@ -104,7 +110,7 @@ def auto_merge(p):
 
 
 def main():
-    ready, waiting, blocked, drafts, held = [], [], [], 0, 0
+    mergeable, blocked, drafts, held = [], [], 0, 0
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     for p in prs:
@@ -116,39 +122,29 @@ def main():
             continue
         try:
             why = why_not_ready(p, by_head)
+            # 0 findings, mergeable, reviewed at head: with only CI left it counts as mergeable once CI passes.
             waits = bool(why) and why.startswith("CI pending")
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        if waits:
-            # 0 findings, mergeable, reviewed at head: only CI is left, so it may be merge-ready soon.
-            waiting.append((p, why, decision))
-        elif why:
+        if why and not waits:
             blocked.append((p, why))
         else:
-            ready.append((p, decision))
+            mergeable.append((p, f"after {why}" if waits else "ready", decision))
 
-    print(f"**Open PRs: {len(prs)}** · merge-ready: {len(ready)} · waiting for CI: {len(waiting)}"
-          f" · not ready: {len(blocked)}"
+    ready = sum(1 for _, s, _ in mergeable if s == "ready")
+    print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({ready} ready, {len(mergeable) - ready} after CI)"
+          f" · cannot merge: {len(blocked)}"
           f" · drafts: {drafts} · held by label (don't-merge/dnm/hold/wip): {held}\n")
-    print(f"## Merge-ready ({len(ready)})\n")
-    print("| PR | Title | Author | Approval | Auto-merge | Reviewed |")
+    print(f"## Can merge ({len(mergeable)})\n")
+    print("0 findings, no conflicts, reviewed at the current head, not waiting on another PR.\n")
+    print("| PR | Title | Author | Approval | Auto-merge | Status |")
     print("|---|---|---|---|---|---|")
-    for p, decision in ready:
+    for p, state, decision in mergeable:
         print(f"| {link(p)} | {title(p, 70)} | {p['user']['login']} | "
-              f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | `{p['head']['sha'][:9]}` |")
-    if not ready:
-        print("| — | no merge-ready PRs | | | | |")
-
-    print(f"\n## Waiting for CI ({len(waiting)})\n")
-    print("0 findings, no conflicts, reviewed at the current head; merge-ready once CI passes.\n")
-    print("| PR | Title | Author | Approval | Auto-merge | CI |")
-    print("|---|---|---|---|---|---|")
-    for p, why, decision in waiting:
-        print(f"| {link(p)} | {title(p, 70)} | {p['user']['login']} | "
-              f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {why} |")
-    if not waiting:
+              f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {state} |")
+    if not mergeable:
         print("| — | none | | | | |")
 
     if blocked:
@@ -156,7 +152,7 @@ def main():
         for _, why in blocked:
             counts[group_of(why)] = counts.get(group_of(why), 0) + 1
         order = {g: i for i, g in enumerate(GROUPS)}
-        print(f"\n## Not ready ({len(blocked)})\n")
+        print(f"\n## Cannot merge ({len(blocked)})\n")
         print(" · ".join(f"{GROUP_NAMES.get(g, g)}: {n}" for g, n in sorted(counts.items(), key=lambda kv: order.get(kv[0], len(GROUPS)))))
         print("\nAuto-merge on a PR here merges it once GitHub's requirements pass, open findings or not.\n")
         print("| PR | Title | Author | Auto-merge | Why |")
