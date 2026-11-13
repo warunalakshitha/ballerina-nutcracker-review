@@ -1,9 +1,9 @@
-# Review round · 2026-11-13 13:52
-`pr730remote/main` d69c341a5 · ended 2026-11-13 14:27 · tooling gaps: none (`bal` and `golangci-lint` both present)
+# Review round · 2026-11-13 14:45
+`pr730remote/main` d69c341a5 · ended 2026-11-13 14:54 · tooling gaps: none (`bal` and `golangci-lint` both present) · scope: PR 1377 only (as instructed)
 
-Eight PRs were reviewed this round and all eight reviews are posted. One step didn't happen: the comment adding a new case to issue #1244 was blocked by the permission classifier. Its full text is under **Filed issues**, ready to post by hand.
+PR 1377 changed since our last review, but only because its commits were squashed; the code is the same. I refreshed our summary instead of re-reviewing the code. It now reports 0 findings: the two earlier nits (squash the follow-up fix, tick the corpus-test checkbox) are both fixed. I also checked the PR against the review rules added since the last full review, and it passes all of them.
 
-**Open PRs: 70** · merge-ready: 0 · waiting for CI: 0 · not ready: 67 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
+**Open PRs: 70** · merge-ready: 0 · waiting for CI: 1 · not ready: 66 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
 ## Merge-ready (0)
 
@@ -11,13 +11,13 @@ Eight PRs were reviewed this round and all eight reviews are posted. One step di
 |---|---|---|---|---|
 | — | no merge-ready PRs | | | |
 
-## Waiting for CI (0)
+## Waiting for CI (1)
 
 0 findings, no conflicts, reviewed at the current head; merge-ready once CI passes.
 
 | PR | Title | Author | Approval | CI |
 |---|---|---|---|---|
-| — | none | | | |
+| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | review required | CI pending (9) |
 
 ## Auto-merge enabled (5)
 
@@ -31,9 +31,9 @@ Merges by itself once GitHub's requirements pass; a PR with open findings here n
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | heshanpadmasiri | rebase | CI failed: Validate PR Title, Validate Commit Messages |
 | [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | heshanpadmasiri | rebase | CI failed: Validate Commit Messages, Validate PR Title, Validate PR Title |
 
-## Not ready (67)
+## Not ready (66)
 
-open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 2 · base already merged: 1 · awaiting re-review: 1
+open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 2 · base already merged: 1
 
 | PR | Title | Author | Why |
 |---|---|---|---|
@@ -57,7 +57,6 @@ open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | CI failed: Validate PR Title, Validate Commit Messages |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and quer | heshanpadmasiri | CI failed: Validate Commit Messages, Validate PR Title, Validate PR Title |
 | [#1263](https://github.com/ballerina-nutcracker/ballerina/pull/1263) | feat(compiler): add warnings and report unused variables as  | heshanpadmasiri | conflicting |
-| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed b | azinneera | awaiting re-review: pushed since our review of `d9063e217` |
 | [#1390](https://github.com/ballerina-nutcracker/ballerina/pull/1390) | feat(stdlib): add `ballerina/data.csv` standard library | TharmiganK | open findings: 2 Nits |
 | [#1391](https://github.com/ballerina-nutcracker/ballerina/pull/1391) | feat(stdlib): add `ballerina/data.jsondata` standard library | TharmiganK | open findings: 3 Nits |
 | [#1411](https://github.com/ballerina-nutcracker/ballerina/pull/1411) | feat(stdlib): add byte-stream and Server-Sent Event support  | TharmiganK | open findings: 1 Nit |
@@ -84,12 +83,12 @@ open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 
 | [#1606](https://github.com/ballerina-nutcracker/ballerina/pull/1606) | docs(agents): limit subset doc updates to support and restri | heshanpadmasiri | open findings: 1 Nit |
 | [#1607](https://github.com/ballerina-nutcracker/ballerina/pull/1607) | chore(lint): enable modernize and modernize Go code | heshanpadmasiri | CI failed: Ubuntu WASM Build |
 | [#1608](https://github.com/ballerina-nutcracker/ballerina/pull/1608) | refactor(diagnostics): remove unused diagnostic severities | heshanpadmasiri | CI failed: codecov/patch |
-| [#1609](https://github.com/ballerina-nutcracker/ballerina/pull/1609) | chore(lint): make enum switches exhaustive | heshanpadmasiri | CI failed: Validate PR Title, Validate Commit Messages |
+| [#1609](https://github.com/ballerina-nutcracker/ballerina/pull/1609) | chore(lint): make enum switches exhaustive | heshanpadmasiri | CI failed: codecov/patch, Validate PR Title, Validate Commit Messages |
 | [#1610](https://github.com/ballerina-nutcracker/ballerina/pull/1610) | chore(lint): make expression switches exhaustive | heshanpadmasiri | CI failed: Benchmark memory main vs PR head, Benchmark time main vs PR head, Benchmark HTTP base vs PR head |
 | [#1611](https://github.com/ballerina-nutcracker/ballerina/pull/1611) | refactor(nodes): keep shared base types private | heshanpadmasiri | CI failed: Benchmark time main vs PR head, Benchmark memory main vs PR head, Benchmark HTTP base vs PR head |
 | [#1612](https://github.com/ballerina-nutcracker/ballerina/pull/1612) | chore(lint): enforce module lint tiers | heshanpadmasiri | open findings: 1 Nit |
 | [#1613](https://github.com/ballerina-nutcracker/ballerina/pull/1613) | chore(lint): require production use of functions in strict m | heshanpadmasiri | open findings: 1 Verify, 1 Nit |
-| [#1614](https://github.com/ballerina-nutcracker/ballerina/pull/1614) | chore(lint): enforce shallow declaration checks and fix find | heshanpadmasiri | CI failed: codecov/patch, Benchmark memory main vs PR head, Benchmark HTTP base vs PR head |
+| [#1614](https://github.com/ballerina-nutcracker/ballerina/pull/1614) | chore(lint): enforce shallow declaration checks and fix find | heshanpadmasiri | CI failed: codecov/patch, Ubuntu WASM Build, Benchmark memory main vs PR head |
 | [#1623](https://github.com/ballerina-nutcracker/ballerina/pull/1623) | ci(nightly): add nightly flake sniffer and actionlint | heshanpadmasiri | open findings: 5 Nits |
 | [#1624](https://github.com/ballerina-nutcracker/ballerina/pull/1624) | ci(release): publish an automatic patch release every night | heshanpadmasiri | open findings: 1 Important, 3 Nits |
 | [#1625](https://github.com/ballerina-nutcracker/ballerina/pull/1625) | ci: check stdlib coverage docs before push | TharmiganK | base #1584 already merged; rebase onto main |
@@ -109,46 +108,31 @@ open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 
 
 | PR | Verdict | New Important/Verify findings | Summary |
 |---|---|---|---|
-| #701 (re-review) | Not ready, 5 Nits | none (the TLS protocol-version Nit is fixed) | [link](https://github.com/ballerina-nutcracker/ballerina/pull/701#issuecomment-6161724644) |
-| #1391 (re-review) | Ready except approval, 3 PR-level Nits | none | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1391#issuecomment-6385685350) |
-| #1415 (re-review) | Not ready, 1 Important + 15 Nits | **Important:** the text reader accepts invalid namespace declarations that jBallerina rejects (7 cases, e.g. a duplicate `xmlns:p`, `xmlns:p=''`, rebinding `xml`/`xmlns`) | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1415#issuecomment-6489172644) |
-| #1437 (re-review) | Not ready, 6 Nits | none (the Important invalidate race is fixed: it's now a single locked extern call, checked with a mutant and `-race`) | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1437#issuecomment-6489017303) |
-| #1438 (re-review) | Ready except approval, 0 findings | none | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1438#issuecomment-6817254010) |
-| #1446 (re-review) | Not ready, 5 Nits | none (the race and NaN-threshold findings are fixed; the `!race` exclusion hides only #1123) | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1446#issuecomment-6489164987) |
-| #1661 (new, stack) | Ready except approval, 0 findings | none | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1661#issuecomment-6848221608) |
-| #1662 (new, stack) | Not ready, 2 Verify + 3 Nits | **Verify:** object types that differ only in resource paths are treated as the same type (`T1` with `get a` is accepted as `T2` with `get b`). **Verify:** `d is T` gives a silent `false` against an object type with resource declarations; jBallerina gives `true` | [link](https://github.com/ballerina-nutcracker/ballerina/pull/1662#issuecomment-6848230684) |
+| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | ✅ 0 findings (6 inline fixed, 2 PR-level nits fixed) · refreshed, code not re-reviewed | none | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1377#issuecomment-6311243425) |
+
+What the refresh did for #1377:
+- **Interdiff:** compared `d9063e217` with `c47006ddc`, each against its own merge-base. The PR's diff is identical: a squash onto current main.
+- **Earlier PR-level items:** both are gone. The PR is now one `fix(projects)` commit, so the squash nit no longer applies, and the corpus-test checkbox is ticked.
+- **Rules added since our last review** (skill `1eafee1d` → `2b36fce2`): passes all of them.
+  - License headers: OK. `t.Parallel`: OK. No unused or test-only symbols.
+  - PR body follows the template, with `Fixes #1364`. No `Co-authored-by` trailer, and the author isn't an AI tool.
+  - `go build ./...` passes. `go test -race -count=10` on `TestParseDocumentsParallelPreservesDocumentOrder` passes.
+  - `check_duplicate_tests.py` matched `h0.bal` and `h1.bal` at 0.87. That's intentional: the fixture modules are meant to differ in size, so it isn't a finding.
 
 ## Skipped
-- Conflicting with main: #1189, #1233, #1263, #1481.
-- Stacked on the conflicting #1189: #1221, #1238.
-- #1625: conflicting, and its base branch has no open PR.
+
+- None (only #1377 was in scope this round; the scan also listed MOVED #1189, #1221, #1233, #1238, #1263, #1481 and #1625, which were not reviewed)
 
 ## Filed issues
-None. The #1661/#1662 review found one more case of #1244 on main: a type cast of a remote call, `<any> c->get(1)`, crashes with `transformExprKind: unsupported node type *st.RemoteMethodCallActionNode`. It reproduces at d69c341a5, and jBallerina prints `1`. The open #1255 fixes only `start` under a cast, so this case would remain after it merges.
 
-**The comment adding this case to #1244 was blocked by the permission classifier and was not posted.** The text is in `/private/tmp/claude-501/-Users-waruna-Dev-Git-ballerina-nutcracker-review/627a0055-8127-4b42-ad95-6cf23d2898e5/scratchpad/c1244.md`, ready for:
-`gh issue comment 1244 -R ballerina-nutcracker/ballerina --body-file <that file>`
+- None
 
 ## Review-skill updates
-None. No reviewed PR changes AGENTS.md, skills, lint config, hooks or CI validators. #1625 does, but it was skipped as conflicting.
+
+- None
 
 ## Retrospective inputs
 
 | PR | Kind | Description | Link |
 |---|---|---|---|
-| #701 | wrong | Our earlier TLS Nit used `"TLSv1.0"` as its example, which isn't a Java protocol name; the author corrected it. Check enum and string config values against the upstream Java names. | [#701](https://github.com/ballerina-nutcracker/ballerina/pull/701#issuecomment-6161724644) |
-| #701 | recurring | The unsquashed-correction rule was never raised in about 30 rounds (around 20 earlier `fix(tcp)` fixups). Re-reviews seem to skip skill step 3.2. | [#701](https://github.com/ballerina-nutcracker/ballerina/pull/701#issuecomment-6161724644) |
-| #701 | lint candidate | One-off `check_license_headers.py` sweep of all open PRs; the extra `//` header line went unflagged across rounds. | [#701](https://github.com/ballerina-nutcracker/ballerina/pull/701#issuecomment-6161724644) |
-| #1391 | lint candidate | Flag a commit that edits or deletes a test added by an earlier commit in the same PR as a fixup candidate. | [#1391](https://github.com/ballerina-nutcracker/ballerina/pull/1391#issuecomment-6385685350) |
-| #1415 | missed (ours) | Earlier rounds missed the namespace-declaration checks. When a port uses `encoding/xml` `RawToken`, compare it against the validation list in `values/xml_parse.go`. | [#1415](https://github.com/ballerina-nutcracker/ballerina/pull/1415#issuecomment-6489172644) |
-| #1415 | lint candidate | Flag extern `args[i].(T)` with a blank `ok`, and helpers that duplicate `values.ExpandedXMLName`. | [#1415](https://github.com/ballerina-nutcracker/ballerina/pull/1415#issuecomment-6489172644) |
-| #1437 | missed (ours) | Last round's citation check named only some of the outputs that differ from jBallerina. Run the whole `-v` file on jBallerina and diff every `@output` line. | [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437#issuecomment-6489017303) |
-| #1437 | lint candidate | Run `-v` lib tests on jBallerina and flag differing `@output` lines that have no nearby `ballerina-library#` comment. | [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437#issuecomment-6489017303) |
-| #1437 | recurring | Rules added since the last full review (unsquashed corrections, license headers) weren't applied on refreshes. Re-run every step-6 script whenever the skill hash changes. | [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437#issuecomment-6489017303) |
-| #1438 | missed | heshanpadmasiri raised that the sort key must stay `isolated` for a non-isolated caller; we didn't. Lint candidate: a corpus check that each `isolated function`-typed langlib parameter rejects a non-isolated argument. | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438#issuecomment-6817254010) |
-| #1446 | lint candidate | Flag links to closed nutcracker issues in README support tables, not only in TODO and skip-list comments. Also, SKILL.md idea: allow a `!race` exclusion only after showing the PR's own code is race-free with the known cause disabled. | [#1446](https://github.com/ballerina-nutcracker/ballerina/pull/1446#issuecomment-6489164987) |
-| #1661 | lint candidate | Grep for `.Var.Expr.(ast.BLangExpression)`; group-by keys are still left at `type_resolver.go:6009` and `desugar/query_expression.go:653`. | [#1661](https://github.com/ballerina-nutcracker/ballerina/pull/1661#issuecomment-6848221608) |
-| #1662 | missed | CodeRabbit found a nil-pointer panic for a recursive path parameter type (`get [R value]()` inside `R`); we had no probe for recursive types in new type-resolution paths. | [#1662](https://github.com/ballerina-nutcracker/ballerina/pull/1662#issuecomment-6848230684) |
-| #1662 | lint candidate | Flag new object-type diagnostics that use `ty.GetPosition()` where a member position is available. | [#1662](https://github.com/ballerina-nutcracker/ballerina/pull/1662#issuecomment-6848230684) |
-
-Leftover: the probe directory `/private/tmp/review-sp/probe-cast` wasn't removed because the safety check blocked the delete; the runner's cleanup of `$SP` will remove it. Nothing was committed or pushed.
+| — | — | None this round | — |
