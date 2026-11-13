@@ -102,6 +102,33 @@ def summaries(n):
     return [c["body"] for c in sorted(ours, key=lambda c: c["updated_at"])]
 
 
+def graphql(q, args=()):
+    """Parsed `gh api graphql` output, or None if it fails after retries (cloud sessions may lack GraphQL)."""
+    for i in range(4):
+        try:
+            r = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", *args],
+                               capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            time.sleep(3 * (i + 1))
+            continue
+        if r.returncode == 0:
+            return json.loads(r.stdout)
+        time.sleep(3 * (i + 1))
+    return None
+
+
+def merge_queue(branch="main"):
+    """{PR number: (position, state)} for the branch's merge queue, or None if it can't be read."""
+    owner, name = REPO.split("/")
+    out = graphql('{repository(owner:"%s",name:"%s"){mergeQueue(branch:"%s"){entries(first:100)'
+                  '{nodes{position state pullRequest{number}}}}}}' % (owner, name, branch))
+    if out is None:
+        return None
+    mq = (out.get("data") or {}).get("repository", {}).get("mergeQueue") or {}
+    return {e["pullRequest"]["number"]: (e["position"], e["state"].replace("_", " ").lower())
+            for e in (mq.get("entries") or {}).get("nodes", []) if e.get("pullRequest")}
+
+
 def review_threads(n):
     """[(first comment id, resolved)] per review thread. Cloud sessions serve the `ccr` route;
     elsewhere (a local gh login) that route doesn't exist, so fall back to GraphQL."""
@@ -115,20 +142,8 @@ def review_threads(n):
              'nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}' % (owner, name))
         threads, after = [], None
         while True:
-            out = None
-            args = ["gh", "api", "graphql", "-f", f"query={q}", "-F", f"n={n}"]
-            if after:
-                args += ["-f", f"after={after}"]
-            for i in range(4):
-                try:
-                    r = subprocess.run(args, capture_output=True, text=True, timeout=120)
-                except subprocess.TimeoutExpired:
-                    time.sleep(3 * (i + 1))
-                    continue
-                if r.returncode == 0:
-                    out = json.loads(r.stdout)
-                    break
-                time.sleep(3 * (i + 1))
+            args = ["-F", f"n={n}"] + (["-f", f"after={after}"] if after else [])
+            out = graphql(q, args)
             if out is None:
                 raise GhError(f"review threads for #{n}: neither ccr route nor GraphQL worked")
             rt = out["data"]["repository"]["pullRequest"]["reviewThreads"]
