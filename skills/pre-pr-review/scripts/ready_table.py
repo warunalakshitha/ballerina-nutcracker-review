@@ -97,14 +97,17 @@ def link(p):
 
 def main():
     ready, waiting, blocked, drafts, held = [], [], [], 0, 0
+    status = {}
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     for p in prs:
         if p["draft"]:
             drafts += 1
+            status[p["number"]] = "draft"
             continue
         if skipped_by_label(p):
             held += 1
+            status[p["number"]] = "held by label"
             continue
         try:
             why = why_not_ready(p, by_head)
@@ -112,7 +115,9 @@ def main():
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
+            status[p["number"]] = "could not check"
             continue
+        status[p["number"]] = why or "merge-ready"
         if waits:
             # 0 findings, mergeable, reviewed at head: only CI is left, so it may be merge-ready soon.
             waiting.append((p, why, decision))
@@ -142,6 +147,19 @@ def main():
               f"{decision.replace('_', ' ').lower()} | {why} |")
     if not waiting:
         print("| — | none | | | |")
+
+    # Auto-merge lands a PR once GitHub's required checks and approvals pass, whatever our findings say.
+    auto = [p for p in prs if p.get("auto_merge")]
+    print(f"\n## Auto-merge enabled ({len(auto)})\n")
+    print("Merges by itself once GitHub's requirements pass; a PR with open findings here needs a look first.\n")
+    print("| PR | Title | Author | Enabled by | Method | Our status |")
+    print("|---|---|---|---|---|---|")
+    for p in auto:
+        am = p["auto_merge"]
+        print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {(am.get('enabled_by') or {}).get('login', '?')} | "
+              f"{am.get('merge_method', '?')} | {status.get(p['number'], '?')} |")
+    if not auto:
+        print("| — | none | | | | |")
 
     if blocked:
         counts = {}
