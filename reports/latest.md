@@ -3,7 +3,7 @@
 
 PR 1377 changed since our last review, but only because its commits were squashed; the code is the same. I refreshed our summary instead of re-reviewing the code. It now reports 0 findings: the two earlier nits (squash the follow-up fix, tick the corpus-test checkbox) are both fixed. I also checked the PR against the review rules added since the last full review, and it passes all of them.
 
-**Open PRs: 70** · can merge: 7 (5 ready, 2 after CI) · cannot merge: 60 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
+**Open PRs: 70** · can merge: 7 (2 in merge queue, 3 ready, 2 after CI) · cannot merge: 60 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
 ## Can merge (7)
 
@@ -11,17 +11,17 @@ PR 1377 changed since our last review, but only because its commits were squashe
 
 | PR | Title | Author | Approval | Auto-merge | Status |
 |---|---|---|---|---|---|
-| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | approved | — | ready |
+| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | approved | — | in merge queue (#1, awaiting checks) |
+| [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | approved | — | in merge queue (#2, awaiting checks) |
 | [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | review required | — | ready |
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | review required | on (rebase, heshanpadmasiri) | ready |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and query selects | heshanpadmasiri | review required | — | ready |
 | [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | approved | on (rebase, warunalakshitha) | after CI pending (9) |
 | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | after CI pending (11) |
-| [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | review required | on (rebase, heshanpadmasiri) | ready |
 
 ## Cannot merge (60)
 
-open findings: 35 · CI failed: 7 · conflicting: 8 · stacked on conflicting: 2 · base already merged: 1 · stacked: 2 · awaiting re-review: 5
+open findings: 37 · CI failed: 7 · conflicting: 8 · stacked on conflicting: 2 · base already merged: 1 · stacked: 2 · awaiting re-review: 3
 
 Auto-merge on a PR here merges it once GitHub's requirements pass, open findings or not.
 
@@ -50,8 +50,8 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 | [#1422](https://github.com/ballerina-nutcracker/ballerina/pull/1422) | feat(stdlib): add `ballerina/data.yaml` standard library | TharmiganK | — | open findings: 1 Important, 1 Nit |
 | [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) | feat(runtime): expose annotations of nested field types | warunalakshitha | — | open findings: 1 Important, 2 Nits |
 | [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) | fix(semantics): carry annotations on inferred typedesc args | warunalakshitha | — | open findings: 1 Important, 1 Nit |
-| [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437) | feat(stdlib): add `ballerina/cache` standard library | TharmiganK | — | awaiting re-review: pushed since our review of `c326f517b` |
-| [#1446](https://github.com/ballerina-nutcracker/ballerina/pull/1446) | feat(stdlib): add `ballerina/ftp` standard library | TharmiganK | — | awaiting re-review: pushed since our review of `c2033424a` |
+| [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437) | feat(stdlib): add `ballerina/cache` standard library | TharmiganK | — | open findings: 3 Nits |
+| [#1446](https://github.com/ballerina-nutcracker/ballerina/pull/1446) | feat(stdlib): add `ballerina/ftp` standard library | TharmiganK | — | open findings: 4 Nits |
 | [#1465](https://github.com/ballerina-nutcracker/ballerina/pull/1465) | fix(http): send http:Request message headers and type client | TharmiganK | — | open findings: 2 Nits |
 | [#1476](https://github.com/ballerina-nutcracker/ballerina/pull/1476) | fix(parser): normalize source newlines and BOM | snelusha | — | conflicting |
 | [#1480](https://github.com/ballerina-nutcracker/ballerina/pull/1480) | feat(workflow): bundle ballerina/workflow with an in-memory  | hasithaa | — | open findings: 8 Nits |
