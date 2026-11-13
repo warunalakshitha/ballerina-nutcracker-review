@@ -26,10 +26,10 @@ produces them. A PR must come with `INTENT.md` and `review-report.md`; the
 report is produced by running this skill with whatever agent the developer
 uses, and `scripts/review-check.sh` verifies the result (in CI and pre-push).
 
-## Local-only
+## Runner
 
-Run entirely on this machine: local `git`, `go`, `golangci-lint` / `staticcheck`,
-`bal`, local jBallerina source. No Codecov, CodeRabbit, cloud agents or CI as
+Run in the review session (a cloud session per `references/cloud-round.md`, or locally): its own `git`, `go`,
+`golangci-lint` / `staticcheck`, `bal`, jBallerina source clone. No Codecov, CodeRabbit or CI as
 the runner. Do not open a PR or post to GitHub unless the user asks.
 
 | Role | Path |
