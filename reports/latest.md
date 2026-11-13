@@ -1,6 +1,6 @@
-# Review round · 2026-11-12 20:53 Asia/Colombo
+# Review round · 2026-11-12 23:13
 
-`pr730remote/main` is at `d69c341a5`. The round ended at 2026-11-12 21:33. No tooling gaps: `gh` auth, `bal` and `golangci-lint` were all available.
+`pr730remote/main` `d69c341a5` · ended 23:42 · no tooling gaps (`bal`, `go` and `golangci-lint` are all available)
 
 **Open PRs: 69** · merge-ready: 5 · waiting for CI: 1 · not ready: 57 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 3
 
@@ -24,7 +24,7 @@
 
 ## Not ready (57)
 
-open findings: 30 · CI failed: 5 · conflicting: 10 · not reviewed at current head: 12
+open findings: 33 · CI failed: 6 · conflicting: 10 · not reviewed at current head: 8
 
 | PR | Title | Author | Why |
 |---|---|---|---|
@@ -34,7 +34,7 @@ open findings: 30 · CI failed: 5 · conflicting: 10 · not reviewed at current 
 | [#985](https://github.com/ballerina-nutcracker/ballerina/pull/985) | perf(projects): fix parallelization issue | azinneera | conflicting |
 | [#1053](https://github.com/ballerina-nutcracker/ballerina/pull/1053) | fix(types): treat readonly class values as readonly | heshanpadmasiri | conflicting |
 | [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | CI failed: Validate Commit Messages, Validate PR Title |
-| [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | not reviewed at current head |
+| [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | CI failed: Validate PR Title |
 | [#1188](https://github.com/ballerina-nutcracker/ballerina/pull/1188) | fix(nodebuilder): report '_' used as identifier as syntax er | heshanpadmasiri | open findings: 1 Important, 1 Nit |
 | [#1189](https://github.com/ballerina-nutcracker/ballerina/pull/1189) | feat(worker): support worker message passing | heshanpadmasiri | conflicting |
 | [#1193](https://github.com/ballerina-nutcracker/ballerina/pull/1193) | fix(semantics): evaluate computed mapping keys as expression | heshanpadmasiri | open findings: 6 Nits |
@@ -52,9 +52,9 @@ open findings: 30 · CI failed: 5 · conflicting: 10 · not reviewed at current 
 | [#1391](https://github.com/ballerina-nutcracker/ballerina/pull/1391) | feat(stdlib): add `ballerina/data.jsondata` standard library | TharmiganK | open findings: 1 Important, 2 Nits |
 | [#1411](https://github.com/ballerina-nutcracker/ballerina/pull/1411) | feat(stdlib): add byte-stream and Server-Sent Event support  | TharmiganK | open findings: 1 Nit |
 | [#1422](https://github.com/ballerina-nutcracker/ballerina/pull/1422) | feat(stdlib): add `ballerina/data.yaml` standard library | TharmiganK | open findings: 1 Important, 12 Nits |
-| [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) | feat(runtime): expose annotations of nested field types | warunalakshitha | not reviewed at current head |
-| [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) | fix(semantics): carry annotations on inferred typedesc args | warunalakshitha | not reviewed at current head |
-| [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sor | warunalakshitha | not reviewed at current head |
+| [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) | feat(runtime): expose annotations of nested field types | warunalakshitha | open findings: 2 Important, 3 Nits |
+| [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) | fix(semantics): carry annotations on inferred typedesc args | warunalakshitha | open findings: 1 Important, 2 Nits |
+| [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sor | warunalakshitha | open findings: 1 Verify, 1 Nit |
 | [#1465](https://github.com/ballerina-nutcracker/ballerina/pull/1465) | fix(http): send http:Request message headers and type client | TharmiganK | open findings: 2 Nits |
 | [#1476](https://github.com/ballerina-nutcracker/ballerina/pull/1476) | fix(parser): normalize source newlines and BOM | snelusha | conflicting |
 | [#1480](https://github.com/ballerina-nutcracker/ballerina/pull/1480) | feat(workflow): bundle ballerina/workflow with an in-memory  | hasithaa | open findings: 8 Nits |
@@ -84,46 +84,55 @@ open findings: 30 · CI failed: 5 · conflicting: 10 · not reviewed at current 
 | [#1639](https://github.com/ballerina-nutcracker/ballerina/pull/1639) | fix(semantics): reject non-type symbols in type references | heshanpadmasiri | not reviewed at current head |
 | [#1640](https://github.com/ballerina-nutcracker/ballerina/pull/1640) | fix(types): defer recursive subtype checks until types are d | heshanpadmasiri | not reviewed at current head |
 | [#1641](https://github.com/ballerina-nutcracker/ballerina/pull/1641) | fix(symbols): stop transitive field walk on object inclusion | heshanpadmasiri | not reviewed at current head |
-| [#1642](https://github.com/ballerina-nutcracker/ballerina/pull/1642) | fix(types): resolve annotations on live variables and neste | heshanpadmasiri | not reviewed at current head |
+| [#1642](https://github.com/ballerina-nutcracker/ballerina/pull/1642) | fix(types): resolve annotations on local variables and neste | heshanpadmasiri | not reviewed at current head |
+
+The table lists #1165 as "CI failed: Validate PR Title", but that check now passes. All its checks are green, so the table is reading an old failed run. With 0 findings, #1165 is in practice merge-ready.
 
 ## This round
 
-| PR | Verdict | New Important / Verify findings | Summary |
+| PR | Verdict | New Important/Verify | Summary |
 |---|---|---|---|
-| #1536 | **NOT READY**: 4 Important, 8 Verify, 10 Nits | 🔴 `sig-unclosed-call-absorbs-next-statement`: `add(1, ` followed by an assignment line gives activeParameter 3 instead of 1; lang-lib calls get `null`<br>🔴 `sig-union-receiver-arg-types`: a method call on an `A\|B` receiver shows the arguments as the label, e.g. `m(1, "q")`<br>🔴 `sig-monomorphic-langlib-docs`: `arr.indexOf(` has no docs because the lookup uses the monomorphized ref<br>🔴 `sig-sibling-module-docs`: no docs for callees in a sibling module of the same package<br>🟡 `sig-out-of-range-active-parameter`: LSP 3.18 treats an out-of-range `activeParameter` as 0<br>🟡 `sig-callee-name-of-nested-call`: `add(1, ‸g(2))` returns `null`<br>🟡 `sig-names-only-drops-methods`: one undefined name in the module makes method, `new` and lang-lib help return `null`<br>🟡 `sig-new-paren-text-scan`: `new Box // c` then `(` on the next line gives no help<br>🟡 `sig-object-type-method-docs`: no docs when the receiver is typed as an object type<br>🟡 `sig-unused-context-drops-help`: an invalid `context`, which the handler never reads, makes the result `null`<br>🟡 `sig-stale-on-callee-file-edit`: an edit to the callee's file right after the request returned the old signature in 7 of 16 rounds<br>🟡 `sig-errored-dependency-kills-help`: an unused variable in an imported module makes help return `null` in every module that imports it | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1536#issuecomment-6624746231) |
+| #1165 | READY except approval | None. The rebase left the tree unchanged, and all earlier items are fixed. | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1165#issuecomment-6022408692) |
+| #1434 | NOT READY | **Important:** since 1be0a790f, an alias whose target is still being resolved copies no members. With `type Alias Node;` declared after a recursive `Node`, `f(*Alias)` rejects `v`. main and jBallerina print 3 and 7.<br>**Important:** commit 19b7df2b0 doesn't build; squash 0fc0e1d0e into it. | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1434#issuecomment-6506053463) |
+| #1435 | NOT READY | **Important:** commit 5ec80fd34 doesn't build; squash 1078f0ea5 into it. | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1435#issuecomment-6720717565) |
+| #1438 | NOT READY | **Verify:** `pop`, `shift` and `unshift` on a union of fixed-length lists (`int[1]\|int[2]`) compile and then always panic. jBallerina rejects them at compile time. | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1438#issuecomment-6817254010) |
 
-- **What was posted:** the summary comment was updated, plus 21 new inline threads. Nothing was resolved, and no replies or issues were posted.
-- **Earlier findings:** all 21 earlier code findings are fixed or resolved. The PR-level Nit "Later commits rewrite fixtures the first commit adds" is still open.
-- **Coverage of the new `ls-review.md` sections:**
-  - The new section 3 checks gave `sig-out-of-range-active-parameter` and `sig-malformed-params-null`.
-  - Section 6 (callee location, receiver shape, cursor boundaries, compile stage, rendered output) was probed on the real server.
-  - Section 7 fixtures and harness were checked. The PR adds no dev tools to run.
-  - Section 9 got one subagent per package, plus the section 5 end-to-end trace.
-- **Verification:** an independent fresh subagent re-ran all 12 Important/Verify findings at head, and all reproduced.
-- **Checks:** `go vet ./ls/...`, `go test ./ls/...` and `go test -race -count=5 ./ls/...` pass, each of the 5 commits builds on its own, and CI is green.
-- **reviewed_diff:** `gh pr diff` returned HTTP 406 because the PR has 316 files, so `reviewed_diff` is the sha256 of `git diff <merge-base> <head>`.
-- **Overlap kept:** `sig-markdown-first-config-name` was flagged as overlapping hasithaa's resolved thread. I kept it because that thread named 4 fixtures, all of which were fixed, and this config wasn't one of them. The body says so.
+Nits posted this round:
+- **#1434:** add `Fixes #1527`, add a test case for #1527, and use the body template.
+- **#1435:** test cases for two of the fix's paths are missing, and use the body template.
+- **#1438:** an empty list is reported as readonly.
 
 ## Skipped
-- None. Only PR 1536 was in scope, and it merges cleanly.
+- **Conflicting with main (not reviewed):**
+  - #1189, #1221 and #1238: the whole worker stack; #1189 conflicts at its base.
+  - #1233, #1263, #1481.
+  - #1625: its base branch has no open PR.
+  - #1638, #1639, #1640, #1641 and #1642: the top of the #1607–#1642 stack. Every PR in that stack that needed review conflicts.
+- **Not checked:** none.
 
 ## Filed issues
-- None. The out-of-scope items can't be reproduced through features on main, because main's LS has no hover or other position-based requests:
-  - A `# # Deprecated` section drops the last parameter's doc (`nodebuilder/node_builder.go:739`).
-  - A line past EOF gets -32602 or a clamp depending on whether the file ends with a newline.
-  - A wrongly typed capability makes `initialize` fail.
-
-  They will surface once features that use them land.
+- [#1646](https://github.com/ballerina-nutcracker/ballerina/issues/1646) `[Bug]: record type inclusion of a type alias reports "included type is not a record type"`.
+  - Reproduced on main d69c341a5; jBallerina prints `5 true`.
+  - A clean-context spec check prefers the reading that makes it valid.
+  - No duplicates found. Related: #1289, #1295.
 
 ## Review-skill updates
-- None from the PR: it changes no process files.
-- Agent suggestion for `ls-review.md` section 3 ("spec defaults"): when no spec-conforming value exists, as with an out-of-range `activeParameter`, post the finding as Verify.
+None. No reviewed PR changes process files.
 
 ## Retrospective inputs
 
 | PR | Kind | Description | Link |
 |---|---|---|---|
-| #1536 | missed | Earlier rounds missed hasithaa's expanded type labels and fenced-code doc rendering. The new section 6 "read the rendered output" check would catch both. | [PR](https://github.com/ballerina-nutcracker/ballerina/pull/1536) |
-| #1536 | missed | Earlier rounds missed 4 Important bugs: unclosed call before an assignment, union receiver, generic lang-lib docs, sibling-module docs. They were found only with the new section 6 probes. | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1536#issuecomment-6624746231) |
-| #1536 | wasted | The review agent handed back twice before its own package subagents finished. It blamed the handback check, not the coordinator. I re-ran s4, s5 and the verifiers from the coordinator. agent-instructions.md could tell agents to run package subagents in the foreground. | n/a |
-| #1536 | lint candidate | None. | n/a |
+| #1434 | missed | CodeRabbit's stale stub-fingerprint thread (already noted in an earlier retrospective). | [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) |
+| #1434 | lint candidate | A commit that doesn't build has recurred on this stack. A per-commit `go build` check (`git rebase -x`) would catch it every time. | [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) |
+| #1435 | missed | CodeRabbit's outside-diff items "constructor args lose named types" and "deferred param defaults"; both are now fixed in 5ec80fd34. | [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) |
+| #1435 | recurring | A commit that doesn't build: follow-up refactor commits that later commits rely on are left unsquashed. | [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) |
+| #1438 | missed | heshanpadmasiri: the sort key must stay isolated when the caller is not isolated. Probe declared isolated callback parameters from a non-isolated caller. | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) |
+| #1438 | missed | CodeRabbit: a stray "parameter" in the `sort` doc text. | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) |
+| #1438 | lint candidate | Flag `ToListAtomicType(...) != nil && IsNever(atomic.Rest())` used as an "is fixed-length" test, because it misses unions. `push` at `registry.go:127` on main has the same pattern. | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) |
+
+**Other notes:**
+- **Flaky test:** `corpus/lib/subset3/task-misfire1-v.bal` failed once during the #1438 review and passed when rerun alone.
+- **Unfiled bug on main:** the #1438 agent found the same union gap in `push` on main (`int[1]|int[2]` compiles, then panics at runtime). It ran no duplicate search, so I haven't filed it.
+
+All worktrees, binaries and probes from this round are removed.
