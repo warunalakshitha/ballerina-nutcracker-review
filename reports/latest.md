@@ -2,7 +2,7 @@
 
 `origin/main` d69c341a5 · ended 2026-11-13 17:20 · tooling gaps: none (cloud session; Go 1.27.1 installed from the module-proxy toolchain because go.dev is blocked; actionlint v1.7.7)
 
-**Open PRs: 70** · can merge: 7 (0 in merge queue, 5 ready, 2 after CI) · cannot merge: 60 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
+**Open PRs: 70** · can merge: 7 (2 in merge queue, 3 ready, 2 after CI) · cannot merge: 60 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
 ## Can merge (7)
 
@@ -10,13 +10,13 @@
 
 | PR | Title | Author | Approval | Auto-merge | Status |
 |---|---|---|---|---|---|
-| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | approved | — | ready |
+| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | approved | — | in merge queue (#1, awaiting checks) |
+| [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | approved | — | in merge queue (#2, awaiting checks) |
 | [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | review required | — | ready |
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | review required | on (rebase, heshanpadmasiri) | ready |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and query selects | heshanpadmasiri | review required | — | ready |
-| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | approved | on (rebase, warunalakshitha) | after CI pending (7) |
-| [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | after CI pending (4) |
-| [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | approved | — | ready |
+| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | approved | on (rebase, warunalakshitha) | after CI pending (4) |
+| [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | after CI pending (3) |
 
 ## Cannot merge (60)
 
