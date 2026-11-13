@@ -41,7 +41,8 @@ For each native method, read the Java class it maps to, e.g. `UdpClient.java` or
 - error types and messages, and which error is returned versus panicked;
 - default values and timeouts (`0` or negative meaning "no timeout");
 - lifecycle: `start`, `gracefulStop`, `immediateStop`, restart after stop, double `close()`, attach and detach, and `start()` with no service;
-- resource limits (buffer sizes, truncation), encodings and charsets, IPv6, and name resolution.
+- resource limits (buffer sizes, truncation), encodings and charsets, IPv6, and name resolution;
+- config mapping: for each config record field the natives read (e.g. `secureSocket.protocol.versions`, `ciphers`, `cert`), check the Go translation is exact: no list collapsed to a range, no unknown enum or string value skipped silently, no empty result falling back to a default. A lossy mapping that isn't documented is a finding.
 
 Confirm each difference with `bal run` (see the main skill's step 10) before raising it. Apply the main skill's Base check and spec-over-jBallerina rules.
 
