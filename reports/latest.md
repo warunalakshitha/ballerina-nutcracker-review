@@ -17,9 +17,9 @@ PR 1377 changed since our last review, but only because its commits were squashe
 
 | PR | Title | Author | Approval | CI |
 |---|---|---|---|---|
-| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | review required | CI pending (9) |
+| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed by position | azinneera | approved | CI pending (9) |
 
-## Auto-merge enabled (5)
+## Auto-merge enabled (6)
 
 Merges by itself once GitHub's requirements pass; a PR with open findings here needs a look first.
 
@@ -29,6 +29,7 @@ Merges by itself once GitHub's requirements pass; a PR with open findings here n
 | [#1188](https://github.com/ballerina-nutcracker/ballerina/pull/1188) | fix(nodebuilder): report '_' used as identifier as syntax er | heshanpadmasiri | heshanpadmasiri | rebase | open findings: 1 Important, 1 Nit |
 | [#1208](https://github.com/ballerina-nutcracker/ballerina/pull/1208) | fix(semantics): reject out-of-range int literals | heshanpadmasiri | heshanpadmasiri | rebase | open findings: 2 Nits |
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | heshanpadmasiri | rebase | CI failed: Validate PR Title, Validate Commit Messages |
+| [#1377](https://github.com/ballerina-nutcracker/ballerina/pull/1377) | fix(projects): parse module documents into a slice indexed b | azinneera | warunalakshitha | rebase | CI pending (9) |
 | [#1495](https://github.com/ballerina-nutcracker/ballerina/pull/1495) | test: clean up constant folding skip list | heshanpadmasiri | heshanpadmasiri | rebase | CI failed: Validate Commit Messages, Validate PR Title, Validate PR Title |
 
 ## Not ready (66)
@@ -84,7 +85,7 @@ open findings: 39 · CI failed: 15 · conflicting: 9 · stacked on conflicting: 
 | [#1607](https://github.com/ballerina-nutcracker/ballerina/pull/1607) | chore(lint): enable modernize and modernize Go code | heshanpadmasiri | CI failed: Ubuntu WASM Build |
 | [#1608](https://github.com/ballerina-nutcracker/ballerina/pull/1608) | refactor(diagnostics): remove unused diagnostic severities | heshanpadmasiri | CI failed: codecov/patch |
 | [#1609](https://github.com/ballerina-nutcracker/ballerina/pull/1609) | chore(lint): make enum switches exhaustive | heshanpadmasiri | CI failed: codecov/patch, Validate PR Title, Validate Commit Messages |
-| [#1610](https://github.com/ballerina-nutcracker/ballerina/pull/1610) | chore(lint): make expression switches exhaustive | heshanpadmasiri | CI failed: Benchmark memory main vs PR head, Benchmark time main vs PR head, Benchmark HTTP base vs PR head |
+| [#1610](https://github.com/ballerina-nutcracker/ballerina/pull/1610) | chore(lint): make expression switches exhaustive | heshanpadmasiri | CI failed: Benchmark memory main vs PR head, Ubuntu Native Build, Benchmark time main vs PR head |
 | [#1611](https://github.com/ballerina-nutcracker/ballerina/pull/1611) | refactor(nodes): keep shared base types private | heshanpadmasiri | CI failed: Benchmark time main vs PR head, Benchmark memory main vs PR head, Benchmark HTTP base vs PR head |
 | [#1612](https://github.com/ballerina-nutcracker/ballerina/pull/1612) | chore(lint): enforce module lint tiers | heshanpadmasiri | open findings: 1 Nit |
 | [#1613](https://github.com/ballerina-nutcracker/ballerina/pull/1613) | chore(lint): require production use of functions in strict m | heshanpadmasiri | open findings: 1 Verify, 1 Nit |
