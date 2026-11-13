@@ -30,7 +30,7 @@ Per finished review: dry-run `python3 $TOOLS/skills/pre-pr-review/scripts/post_r
 
 ## 5. Report
 Your final message is the report; it is what the user reads in the session, so make it complete and easy to scan (Markdown headings and tables, no doc or file needed):
-1. Title `# Review round · <STARTED>` using the `STARTED` date and time from the prompt (when the review started; if missing, the time you started), then one line: `$UPSTREAM/main` sha, end time, tooling gaps.
+1. Title `# Review round · <STARTED>` using the `STARTED` date and time from the prompt (when the review started; if missing, the time you started), then one line: `$UPSTREAM/main` sha, end time, tooling gaps. Write times as `YYYY-MM-DD HH:MM` in Asia/Colombo, without the zone name.
 2. The output of `cd $TOOLS/skills/pre-pr-review/scripts && python3 ready_table.py`, pasted as is: the **Open PRs** totals line (total, can merge with its in-merge-queue/ready/after-CI split, cannot merge, drafts, held by label), the **Can merge** table (status `in merge queue` first in queue order, then `ready` or `after CI pending`) and the **Cannot merge** table with the reason each PR can't merge, including stacked PRs waiting on the PR below them (both tables oldest PR first, with an auto-merge column; Cannot merge opens with a count per reason). Run it after posting so it reflects this round. If it fails, say so and list each open PR with its reason by hand.
 3. **This round** table, oldest PR first: PR | verdict | new Important/Verify findings (one line each) | summary link. Write "Nothing reviewed" if no PR needed review, and say why (e.g. all conflicting).
 4. **Skipped** (conflicting, not checked) and **Filed issues** as short lists, PR numbers in ascending order.

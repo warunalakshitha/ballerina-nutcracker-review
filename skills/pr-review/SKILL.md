@@ -13,12 +13,12 @@ description: >-
 
 # Ballerina Nutcracker PR Review
 
-## Local-only
+## Runner
 
-Run entirely on this machine. Do **not** use hosted automations, cloud agents, or remote CI as the review runner.
+Review rounds run in a Claude Code cloud session set up by `skills/pre-pr-review/references/cloud-round.md`; an interactive local review uses the same rules. Do **not** use CI, Codecov or other bots as the review runner.
 
-- Checkout and build/test in the local Nutcracker clone (or a local `git worktree` under `/tmp`).
-- Use local `gh`, `go`, `bal`, and local jBallerina source.
+- Checkout and build/test in the session's Nutcracker clone (or a `git worktree` under `/tmp`).
+- Use the session's `gh`, `go`, `bal`, and its jBallerina source clone.
 - Deliver the report in chat only. Do **not** post GitHub comments unless the user explicitly asks.
 
 Local roots:

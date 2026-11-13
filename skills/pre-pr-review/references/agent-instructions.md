@@ -18,7 +18,7 @@ You review ONE open PR and produce local files. Never post, comment, push, commi
 
 ## Paths
 - Main clone: `$REPO`; `$UPSTREAM` is its ballerina-nutcracker/ballerina remote (`pr730remote` locally, where `origin` is the user's fork; `origin` in a cloud run). Only `git fetch` and `git worktree add $SP/wt/pr<N> ...` there; never modify its working tree or run scripts in it.
-- Scratch `$SP` (from your prompt, under /private/tmp) is shared by all agents in the round. It is cleared before and after every round: keep only disposable work there (worktrees `$SP/wt/pr<N>`, probes, `$SP/review-out/<N>/findings.json`).
+- Scratch `$SP` (from your prompt: /tmp/review-sp in a cloud run, under /private/tmp locally) is shared by all agents in the round. It is cleared before and after every round: keep only disposable work there (worktrees `$SP/wt/pr<N>`, probes, `$SP/review-out/<N>/findings.json`).
 - Spec: `$SP/spec.html` (if missing: `curl -sL https://raw.githubusercontent.com/ballerina-platform/ballerina-spec/master/lang/spec.html -o $SP/spec.html`). Spec wins over jBallerina.
 - Spec questions go to a clean-context subagent: give it only the spec section(s) and the repro program, never the PR text, your reasoning or jBallerina's output, and ask for the expected behaviour with the spec rule it rests on. Its answer decides the finding; jBallerina output is supporting data, and a jBallerina difference alone is never a finding.
 
