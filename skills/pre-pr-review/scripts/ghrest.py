@@ -160,8 +160,15 @@ def ci_state(sha):
         if len(runs) >= d.get("total_count", 0) or not d.get("check_runs"):
             break
         page += 1
-    failed, pending = [], 0
+    # A re-run or a newer workflow run (e.g. after a title edit) adds runs and leaves the old ones, often
+    # cancelled, on the commit; only the latest run of each check counts. Run ids grow over time.
+    latest = {}
     for c in runs:
+        key = ((c.get("app") or {}).get("id"), c["name"])
+        if key not in latest or c["id"] > latest[key]["id"]:
+            latest[key] = c
+    failed, pending = [], 0
+    for c in latest.values():
         if c["status"] != "completed":
             pending += 1
         elif c["conclusion"] not in ("success", "skipped", "neutral"):
