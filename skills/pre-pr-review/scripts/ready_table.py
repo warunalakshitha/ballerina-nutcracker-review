@@ -114,7 +114,8 @@ def main():
     mergeable, blocked, drafts, held = [], [], 0, 0
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
-    queue = merge_queue() or {}
+    queue_read = merge_queue({p["number"] for p in prs})
+    queue = queue_read or {}
     for p in prs:
         if p["draft"]:
             drafts += 1
@@ -144,11 +145,13 @@ def main():
 
     ready = sum(1 for _, s, _ in mergeable if s == "ready")
     in_queue = sum(1 for _, s, _ in mergeable if s.startswith("in merge queue"))
-    print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({in_queue} in merge queue, {ready} ready,"
+    print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({in_queue if queue_read is not None else '?'} in merge queue, {ready} ready,"
           f" {len(mergeable) - ready - in_queue} after CI)"
           f" · cannot merge: {len(blocked)}"
           f" · drafts: {drafts} · held by label (don't-merge/dnm/hold/wip): {held}\n")
     print(f"## Can merge ({len(mergeable)})\n")
+    if queue_read is None:
+        print("Couldn't read the merge queue; a queued PR shows as `ready` here.\n")
     print("0 findings, no conflicts, reviewed at the current head, not waiting on another PR.\n")
     print("| PR | Title | Author | Approval | Auto-merge | Status |")
     print("|---|---|---|---|---|---|")
