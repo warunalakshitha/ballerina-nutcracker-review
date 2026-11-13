@@ -6,6 +6,7 @@ review threads. Every call is retried; a call that still fails raises GhError.
 """
 import json
 import os
+import re
 import subprocess
 import time
 
@@ -102,9 +103,9 @@ def summaries(n):
     return [c["body"] for c in sorted(ours, key=lambda c: c["updated_at"])]
 
 
-def graphql(q, args=()):
+def graphql(q, args=(), tries=4):
     """Parsed `gh api graphql` output, or None if it fails after retries (cloud sessions may lack GraphQL)."""
-    for i in range(4):
+    for i in range(tries):
         try:
             r = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", *args],
                                capture_output=True, text=True, timeout=120)
@@ -117,16 +118,47 @@ def graphql(q, args=()):
     return None
 
 
-def merge_queue(branch="main"):
-    """{PR number: (position, state)} for the branch's merge queue, or None if it can't be read."""
+def merge_queue(open_numbers, branch="main"):
+    """{PR number: (position, state)} for the branch's merge queue, or None if it can't be read.
+    GraphQL first (it has the queue's own state); cloud sessions block it, so fall back to REST."""
     owner, name = REPO.split("/")
     out = graphql('{repository(owner:"%s",name:"%s"){mergeQueue(branch:"%s"){entries(first:100)'
-                  '{nodes{position state pullRequest{number}}}}}}' % (owner, name, branch))
-    if out is None:
+                  '{nodes{position state pullRequest{number}}}}}}' % (owner, name, branch), tries=1)
+    if out is not None:
+        mq = (out.get("data") or {}).get("repository", {}).get("mergeQueue") or {}
+        return {e["pullRequest"]["number"]: (e["position"], e["state"].replace("_", " ").lower())
+                for e in (mq.get("entries") or {}).get("nodes", []) if e.get("pullRequest")}
+    return _merge_queue_rest(open_numbers, branch)
+
+
+def _merge_queue_rest(open_numbers, branch):
+    """Each queued PR has a `gh-readonly-queue/<branch>/pr-<N>-<base sha>` branch, built on the commit of the
+    entry ahead of it (the first on <branch>'s head), so following that chain from <branch> gives queue order.
+    Branches of PRs that are no longer open can linger; they're skipped. State comes from the branch's CI."""
+    try:
+        refs = api(f"repos/{REPO}/git/matching-refs/heads/gh-readonly-queue/{branch}/") or []
+        head = api(f"repos/{REPO}/branches/{branch}")["commit"]["sha"]
+    except GhError:
         return None
-    mq = (out.get("data") or {}).get("repository", {}).get("mergeQueue") or {}
-    return {e["pullRequest"]["number"]: (e["position"], e["state"].replace("_", " ").lower())
-            for e in (mq.get("entries") or {}).get("nodes", []) if e.get("pullRequest")}
+    by_base = {}
+    for r in refs:
+        m = re.fullmatch(rf"refs/heads/gh-readonly-queue/{re.escape(branch)}/pr-(\d+)-([0-9a-f]{{40}})", r["ref"])
+        if m and int(m.group(1)) in open_numbers:
+            by_base[m.group(2)] = (int(m.group(1)), r["object"]["sha"])
+    queue, sha = {}, head
+    while sha in by_base and len(queue) < len(by_base):
+        n, sha = by_base.pop(sha)
+        queue[n] = len(queue) + 1
+    # Entries the chain didn't reach (e.g. mid-rebuild after <branch> moved) go last, in PR order.
+    for n, _ in sorted(by_base.values()):
+        queue[n] = len(queue) + 1
+    states = {}
+    for r in refs:
+        m = re.fullmatch(rf"refs/heads/gh-readonly-queue/{re.escape(branch)}/pr-(\d+)-[0-9a-f]{{40}}", r["ref"])
+        if m and int(m.group(1)) in queue:
+            failed, pending = ci_state(r["object"]["sha"])
+            states[int(m.group(1))] = "checks failed" if failed else "awaiting checks" if pending else "checks passed"
+    return {n: (pos, states.get(n, "queued")) for n, pos in queue.items()}
 
 
 def review_threads(n):
