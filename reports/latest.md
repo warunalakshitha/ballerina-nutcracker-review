@@ -2,18 +2,17 @@
 
 `origin/main` cbe12629d · skills ded7d34 · ended 2026-11-14 12:31 · tooling gaps: none (go 1.27.1, bal 2201.14.1, golangci-lint 2.15.0, actionlint 1.7.12, shellcheck 0.9.0, wrk, hyperfine)
 
-**Open PRs: 68** · can merge: 4 (? in merge queue, 4 ready, 0 after CI) · cannot merge: 61 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
+_Open-PR tables refreshed 2026-11-14 20:40 (Asia/Colombo)._
 
-## Can merge (4)
+**Open PRs: 67** · can merge: 3 (0 in merge queue, 3 ready, 0 after CI) · cannot merge: 61 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
-Couldn't read the merge queue; a queued PR shows as `ready` here.
+## Can merge (3)
 
 0 findings, no conflicts, reviewed at the current head, not waiting on another PR.
 
 | PR | Title | Author | Approval | Auto-merge | Status |
 |---|---|---|---|---|---|
 | [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | review required | — | ready |
-| [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | approved | — | ready |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and query selects | heshanpadmasiri | review required | — | ready |
 | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | ready |
 
