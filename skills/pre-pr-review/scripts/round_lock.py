@@ -10,6 +10,11 @@ All lock commits are made in a separate worktree ($LOCK_WT), never in the $TOOLS
   round_lock.py beat <STARTED>              update the lock now; exit 3 if it's no longer ours (stop posting)
   round_lock.py heartbeat <STARTED>         start a detached loop that runs `beat` every hour
   round_lock.py release <STARTED>           drop our lock (round stopped early)
+  round_lock.py queue <STARTED> <file> <name>
+                                            queue a GitHub write as outbox/<name> for the post-outbox Action;
+                                            exit 3 if the lock is no longer ours (stop posting)
+  round_lock.py wait-outbox [minutes]       wait (default 15 min) until the Action has emptied outbox/;
+                                            exit 1 if items are still there (not posted, or failed)
   round_lock.py finish <STARTED> <report> <scan file>
                                             commit the report and the scan, drop the lock, push
 """
@@ -25,6 +30,7 @@ WT = os.environ.get("LOCK_WT", "/tmp/review-lock")
 PID = WT + ".heartbeat.pid"
 LOCK = "reports/round.lock"
 SCAN = "reports/last-scan.txt"
+OUTBOX = "outbox"
 STALE = timedelta(hours=2)  # no heartbeat for this long: the round is dead
 BEAT = int(os.environ.get("LOCK_BEAT_SECONDS", "3600"))
 
@@ -181,6 +187,43 @@ def release(started):
     return 1
 
 
+def queue(started, path, name):
+    if "/" in name or not name.endswith(".json") or not name.startswith(("review-", "issue-")):
+        print("name must be review-<N>.json, issue-<slug>.json or issue-comment-<slug>.json")
+        return 2
+    content = open(path).read()
+    for _ in range(5):
+        sync()
+        lock = read()
+        if not ours(lock, started):
+            print(f"lock is no longer ours: {describe(lock) if lock else 'free'}")
+            return 3
+        os.makedirs(os.path.join(WT, OUTBOX), exist_ok=True)
+        with open(os.path.join(WT, OUTBOX, name), "w") as f:
+            f.write(content)
+        lock["heartbeat_utc"] = now().isoformat()
+        write(lock)
+        if commit_push(f"chore(review): queue {name}", os.path.join(OUTBOX, name), LOCK):
+            print(f"queued {OUTBOX}/{name}")
+            return 0
+    return 1
+
+
+def wait_outbox(minutes="15"):
+    deadline = time.time() + 60 * float(minutes)
+    while True:
+        sync()
+        left = sorted(n for n in os.listdir(os.path.join(WT, OUTBOX)) if n.endswith(".json")) \
+            if os.path.isdir(os.path.join(WT, OUTBOX)) else []
+        if not left:
+            print("outbox empty: everything was posted (see outbox/posted.log)")
+            return 0
+        if time.time() > deadline:
+            print("still queued: " + ", ".join(left) + " (see outbox/posted.log and the post-outbox Action runs)")
+            return 1
+        time.sleep(30)
+
+
 def finish(started, report, scan_file):
     stop_heartbeat()
     text = open(report).read()
@@ -205,7 +248,9 @@ def finish(started, report, scan_file):
 def main():
     cmd, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
     commands = {"status": (status, 0), "unchanged": (unchanged, 1), "take": (take, 2), "beat": (beat, 1), "heartbeat": (heartbeat, 1),
-                "release": (release, 1), "finish": (finish, 3)}
+                "release": (release, 1), "finish": (finish, 3), "queue": (queue, 3), "wait-outbox": (wait_outbox, 1)}
+    if cmd == "wait-outbox" and not args:
+        return wait_outbox()
     if cmd not in commands or len(args) != commands[cmd][1]:
         print(__doc__)
         return 2

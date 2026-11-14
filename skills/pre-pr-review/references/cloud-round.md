@@ -22,21 +22,27 @@ From here on, every way the round ends (a failed gate, a usage limit, an error, 
 - `REPO` = a full clone of https://github.com/ballerina-nutcracker/ballerina at `~/ballerina-lang-go`, `UPSTREAM=origin`.
 - `JBALLERINA_SRC` = a clone of https://github.com/ballerina-platform/ballerina-lang at `~/ballerina-lang`, checked out at tag `v2201.14.1` to match `bal` (shallow is fine).
 - Tools, pinned: Go from the `go.mod` toolchain line (1.27.1), Ballerina 2201.14.1 (`bal version`), golangci-lint at the version in `.github/workflows/golangci-lint.yml` (2.15.0), wrk, hyperfine, python3, actionlint, shellcheck. Install what's missing: apt as root, `https://dist.ballerina.io/downloads/2201.14.1/ballerina-2201.14.1-swan-lake-linux-x64.deb`, or the official release downloads.
+  - Go: go.dev and dl.google.com are blocked, but the module proxy serves toolchains: `go env -w GOTOOLCHAIN=go1.27.1` (the preinstalled Go downloads it on first use).
+  - golangci-lint and actionlint must be built with that Go, or lint refuses the module: `GOTOOLCHAIN=go1.27.1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 github.com/rhysd/actionlint/cmd/actionlint@latest`, then copy both from `$(go env GOPATH)/bin` to `/usr/local/bin` so they come first on PATH.
 
 ## 4. Gate
 If any check fails, stop: review nothing, post nothing, release the lock, report what failed.
-1. `gh api user --jq .login` prints `warunalakshitha`. Comments must come from that account, or the next scan treats every PR as unreviewed and posts duplicates.
+1. `gh api user --jq .login` prints `warunalakshitha` (reads only; this session never writes to the reviewed repo, see §5).
 2. `gh api 'repos/ballerina-nutcracker/ballerina/pulls?per_page=1'` succeeds.
 3. Every tool above is at the stated version, and `bal run` on a hello-world program prints its output.
 
 ## 5. Run
 - Follow `routine.md`; use `/tmp/review-scan-start.txt` as its scan instead of scanning again.
-- Post each PR as soon as its review finishes (routine.md §3), not all together at the end. Right before each post run `$L beat "$STARTED"`: exit 3 means the lock is no longer ours (another round took it over), so stop at once: post nothing more, don't push a report, and say so.
+- This session can read ballerina-nutcracker/ballerina but not write to it (403 "Resource not accessible by integration"). Every GitHub write goes through the outbox: the `post-outbox` Action in this repo posts it as warunalakshitha with a token the session never sees. Never call `post_review.py --post` or any `gh api -X POST/PATCH` on the reviewed repo.
+- A review: once the dry run (`post_review.py <findings.json>`, routine.md §3) is clean, queue it right away, while other reviews still run: `$L queue "$STARTED" $SP/review-out/<N>/findings.json review-<N>.json` (for a stack, the PR the summary goes on). The Action posts it within about a minute.
+- A new issue (routine.md §4): write `{"title": ..., "body": ..., "labels": [...]}` to a file and queue it as `issue-<short-slug>.json`. A comment on an issue or PR: `{"issue": <N>, "body": ...}` queued as `issue-comment-<short-slug>.json`.
+- `queue` exit 3 means the lock is no longer ours (another round took it over): stop at once, queue nothing more, don't push a report, and say so.
 - GraphQL is blocked, so `gh pr ...` and `gh issue ...` fail: use `gh api` REST routes everywhere (the scripts already do). `ready_table.py` reads the merge queue from its `gh-readonly-queue/` branches over REST.
 - Keep the session active until the round ends: wait for every background review agent; don't end the turn while one runs. An idle session can be paused and its agents lost.
 
 ## 6. Finish
-1. After the last post, scan again: `python3 scan_prs.py > /tmp/review-scan-end.txt`. It now lists only what's left (e.g. conflicting PRs); the next round skips if nothing differs from it.
-2. Write the report as `routine.md` §5 says to `$SP/reports/<YYYYMMDD-HHMM>.md`.
-3. `$L finish "$STARTED" $SP/reports/<YYYYMMDD-HHMM>.md /tmp/review-scan-end.txt`: commits `reports/latest.md` (from the `# ` heading on) and `reports/last-scan.txt`, deletes the lock and pushes to `main` as `chore(review): add <STARTED> round report`. Exit 3 means another round holds the lock: don't retry; say so.
+1. `$L wait-outbox`: waits up to 15 minutes for the Action to post everything queued. Link each summary from GitHub (our `PR review summary` comment on the PR) and list in the report anything still queued or dropped (`outbox/posted.log` on main says why).
+2. After that, scan again: `python3 scan_prs.py > /tmp/review-scan-end.txt`. It now lists only what's left (e.g. conflicting PRs); the next round skips if nothing differs from it. If `wait-outbox` exited 1 or any review was dropped or failed, use an empty file (`: > /tmp/review-scan-end.txt`) instead, so the next round doesn't skip PRs whose review never reached GitHub.
+3. Write the report as `routine.md` §5 says to `$SP/reports/<YYYYMMDD-HHMM>.md`.
+4. `$L finish "$STARTED" $SP/reports/<YYYYMMDD-HHMM>.md /tmp/review-scan-end.txt`: commits `reports/latest.md` (from the `# ` heading on) and `reports/last-scan.txt`, deletes the lock and pushes to `main` as `chore(review): add <STARTED> round report`. Exit 3 means another round holds the lock: don't retry; say so.
 - Never commit skill or script changes from a round: propose them in the report; the user applies them locally.
