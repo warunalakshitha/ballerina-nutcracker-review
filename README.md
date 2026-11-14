@@ -18,7 +18,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 ## Scripts (`skills/pre-pr-review/scripts/`)
 
 - `scan_prs.py`: PRs needing review, `NEW` (no summary of ours) or `MOVED` (head changed since our last summary). Skips drafts, PRs approved at their current head, and don't-merge/dnm/hold/wip labels.
-- `ready_table.py`: open-PR totals, then Can merge (in merge queue, ready or after CI) and Cannot merge (with reason) tables, oldest PR first.
+- `ready_table.py`: open-PR totals, then Can merge (in merge queue, ready or after CI), Cannot merge (with reason), then Drafts and held tables, oldest PR first.
 - `post_review.py`: posts or updates a review from `findings.json` (dry run by default, `--post` to post).
 - `stack.py`: the stack a PR belongs to.
 - `post_outbox.py`: posts the reviews, issues and comments a cloud round queued in `outbox/`; run by `.github/workflows/post-outbox.yml` with the `REVIEW_POST_TOKEN` secret, because cloud sessions can't write to ballerina-nutcracker/ballerina.

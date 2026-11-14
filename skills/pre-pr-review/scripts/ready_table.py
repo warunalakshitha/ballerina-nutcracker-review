@@ -1,5 +1,6 @@
-"""Print two Markdown tables of open PRs in ballerina-nutcracker/ballerina: Can merge (merge-queue PRs first,
-in queue order) and Cannot merge (with why; a queued PR with open findings is flagged there).
+"""Print Markdown tables of open PRs in ballerina-nutcracker/ballerina: Can merge (merge-queue PRs first,
+in queue order), Cannot merge (with why; a queued PR with open findings is flagged there), and Drafts and held
+(drafts and don't-merge/dnm/hold/wip labels, which aren't reviewed).
 
 A PR can merge when all of these hold:
 - open, not a draft, no don't-merge/dnm/hold/wip label
@@ -15,7 +16,7 @@ under "Could not check".
 import functools
 import re
 
-from ghrest import REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
+from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
     skipped_by_label, summaries, unresolved_finding_threads
 
 # Stack members share base PRs, so fetch each PR's detail once.
@@ -111,17 +112,18 @@ def auto_merge(p):
 
 
 def main():
-    mergeable, blocked, drafts, held = [], [], 0, 0
+    mergeable, blocked, parked = [], [], []
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
     queue = queue_read or {}
     for p in prs:
         if p["draft"]:
-            drafts += 1
+            parked.append((p, "draft"))
             continue
         if skipped_by_label(p):
-            held += 1
+            labels = [l["name"] for l in p.get("labels", []) if any(k in l["name"].lower() for k in DONT_MERGE)]
+            parked.append((p, "label: " + ", ".join(labels)))
             continue
         try:
             why = why_not_ready(p, by_head)
@@ -148,7 +150,8 @@ def main():
     print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({in_queue if queue_read is not None else '?'} in merge queue, {ready} ready,"
           f" {len(mergeable) - ready - in_queue} after CI)"
           f" · cannot merge: {len(blocked)}"
-          f" · drafts: {drafts} · held by label (don't-merge/dnm/hold/wip): {held}\n")
+          f" · drafts: {sum(1 for _, w in parked if w == 'draft')}"
+          f" · held by label (don't-merge/dnm/hold/wip): {sum(1 for _, w in parked if w != 'draft')}\n")
     print(f"## Can merge ({len(mergeable)})\n")
     if queue_read is None:
         print("Couldn't read the merge queue; a queued PR shows as `ready` here.\n")
@@ -173,6 +176,18 @@ def main():
         print("|---|---|---|---|---|")
         for p, why in blocked:
             print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {auto_merge(p)} | {why} |")
+
+
+    # Not reviewed at all: drafts and PRs held by a don't-merge/dnm/hold/wip label.
+    print(f"\n## Drafts and held ({len(parked)})\n")
+    print("Not reviewed until the PR is marked ready or the label is removed.\n")
+    print("| PR | Title | Author | Why |")
+    print("|---|---|---|---|")
+    for p, why in parked:
+        print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {why} |")
+    if not parked:
+        print("| — | none | | |")
+
 
 
 if __name__ == "__main__":
