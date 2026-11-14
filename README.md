@@ -28,7 +28,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 - **Posting:** cloud sessions can read ballerina-nutcracker/ballerina but not write to it. Rounds queue reviews, issues and comments in `outbox/`; the `post-outbox` Action posts them as the reviewer with the `REVIEW_POST_TOKEN` secret (a classic token with `public_repo`) and logs each in `outbox/posted.log`.
 - **GitHub access for the routine:** the Claude GitHub App, installed on this repo only.
 - **Mac fallback:** `skills/pre-pr-review/scripts/run-round.sh [extra instructions]` runs a round locally if the cloud can't (needs `claude`, `gh`, `go`, `bal`, `wrk`, `hyperfine` on `PATH`, `~/Dev/Git/ballerina-lang-go` with a `pr730remote` remote and `~/Dev/Git/ballerina-lang`; keep the Mac on power). It posts directly with your `gh` login and copies the report to `reports/latest.md` for you to commit. It respects the cloud lock: it stops if a round is running and holds the lock while it runs.
-- **Report tables:** `.github/workflows/refresh-tables.yml` rebuilds the open-PR tables in `reports/latest.md` (`refresh_tables.py`) after each round's report and hourly, with the reviewer's token, so merged and merge-queue PRs show correctly between rounds.
+- **Report tables:** `.github/workflows/refresh-tables.yml` rebuilds the open-PR tables in `reports/latest.md` (`refresh_tables.py`) right after each round pushes its report, with the reviewer's token, so merge-queue PRs show correctly (cloud sessions can't read the queue).
 - **Reports:** each round pushes `reports/latest.md`. Its **Retrospective inputs** section feeds `references/retrospective.md`, which you run interactively.
 
 ## Scripts (`skills/pre-pr-review/scripts/`)
