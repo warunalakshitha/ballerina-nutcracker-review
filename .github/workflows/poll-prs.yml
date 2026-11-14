@@ -4,7 +4,7 @@ name: Poll PRs
 # haven't reviewed and no round is running. Costs no Claude usage when there's nothing to do.
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 concurrency:

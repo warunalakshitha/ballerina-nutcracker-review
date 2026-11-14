@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Start a cloud review round when there's new work (run every 15 minutes by .github/workflows/poll-prs.yml).
+"""Start a cloud review round when there's new work (run hourly by .github/workflows/poll-prs.yml).
 
 No Claude runs unless all of these hold:
   - no round holds reports/round.lock (updated hourly while a round runs; stale after 2 hours)
   - scan_prs.py ran cleanly (no ERR) and lists a mergeable PR that isn't in reports/last-scan.txt
     (scan_prs.py already leaves out PRs pushed less than 30 minutes ago, so bursts of pushes settle first)
   - this poller didn't already start a round for the same scan in the last 6 hours
-    (reports/poller-fired.txt), so a round that keeps failing early isn't restarted every 15 minutes
+    (reports/poller-fired.txt), so a round that keeps failing early isn't restarted every hour
 
 Then it POSTs to the routine's API trigger (ROUTINE_FIRE_URL, ROUTINE_FIRE_TOKEN) and records the scan in
 reports/poller-fired.txt; the workflow commits that file. Prints what it decided; exit 0 either way.
