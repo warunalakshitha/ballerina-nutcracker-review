@@ -9,7 +9,7 @@ and this script posts it with the reviewer's token (GH_TOKEN, an Actions secret)
 
 A posted item is deleted. A review whose PR moved since it was reviewed is dropped (the next round
 re-reviews). Anything else that fails stays for the next run, and the script exits 1 so the job fails.
-Each line of outbox/posted.log records what happened. Issues and comments carry a hidden marker so a
+Each line of outbox/posted.log records what happened; only the newest 100 lines are kept (the rest are in git history). Issues and comments carry a hidden marker so a
 retry after a partly finished run doesn't post them twice.
 """
 import datetime
@@ -23,6 +23,7 @@ from ghrest import ME, REPO, GhError, api
 
 OUTBOX = "outbox"
 LOG = os.path.join(OUTBOX, "posted.log")
+LOG_KEEP = 100  # newest lines kept; older ones stay in git history
 POST_REVIEW = os.path.join(os.path.dirname(os.path.abspath(__file__)), "post_review.py")
 MOVED = ("PR head is ", "moved to ")  # post_review.py's refusals when the PR changed since the review
 
@@ -30,8 +31,9 @@ MOVED = ("PR head is ", "moved to ")  # post_review.py's refusals when the PR ch
 def log(line):
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     print(line)
-    with open(LOG, "a") as f:
-        f.write(f"{stamp} {line}\n")
+    old = open(LOG).read().splitlines() if os.path.exists(LOG) else []
+    with open(LOG, "w") as f:
+        f.write("\n".join((old + [f"{stamp} {line}"])[-LOG_KEEP:]) + "\n")
 
 
 def write(path, payload):
