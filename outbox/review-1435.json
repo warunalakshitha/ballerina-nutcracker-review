@@ -1,0 +1,112 @@
+{
+  "repo": "ballerina-nutcracker/ballerina",
+  "pr": 1435,
+  "head_sha": "bfe316b40b8c1a5042edf9298297ef821b67a4dc",
+  "reviewed_diff": "f6c9355b24888d29d02e00373adb2c6df0dc3df4680ea8c712c06357a22acea6",
+  "skill_version": "b19e979ff0ec8e5677a3684b73f74f93f9674c3b8e272adaa80ab9d3ca420395",
+  "answered": [],
+  "stack": {
+    "prs": [
+      1434,
+      1435
+    ],
+    "heads": {
+      "1434": "77084a87b377f0cd575589caa6ad3efcc1b7e490",
+      "1435": "bfe316b40b8c1a5042edf9298297ef821b67a4dc"
+    },
+    "tip_sha": "bfe316b40b8c1a5042edf9298297ef821b67a4dc",
+    "fixed_later": []
+  },
+  "summary": {
+    "line": "",
+    "checked": [
+      "each commit built and tested",
+      "go test -race -count=10",
+      "issue repros #1496-#1498",
+      "jBallerina parity"
+    ],
+    "items": [
+      "Read line by line: semantics/internal/{common/named_types.go, symbols/symbol_resolver.go, types/type_resolver{,_loop,_state}.go}",
+      "Subset doc: Not needed: 'Supports dependently-typed functions' entry still accurate; union `new` bullet: see the Verify at line 786",
+      "Optional: TestRecordFieldAnnotations{,CrossModule,SymbolPoolRoundtrip} (bodies edited) lack t.Parallel()"
+    ]
+  },
+  "findings": [
+    {
+      "id": "union-new-dependent-arg-doc",
+      "severity": "verify",
+      "kind": "Docs",
+      "anchor": "line",
+      "path": "semantics/internal/types/type_resolver.go",
+      "line": 786,
+      "start_line": null,
+      "title": "Union-class `new` now takes dependently-typed args the doc calls unsupported",
+      "body": "Measured: with this hunk the program below prints `ann`; main panics (`must be Monomorphized`) and jBallerina rejects it (cannot infer the typedesc). subset10.md's Matching jBallerina section still lists dependently-typed calls as unsupported under a union of classes. Is accepting them intended (drop that bullet, note the jBallerina difference), or should they be rejected?",
+      "code": {
+        "lang": "ballerina",
+        "text": "import ballerina/io;\nimport ballerina/lang.value;\n\ntype Person record {|\n    string name;\n|};\n\nclass A {\n    string got;\n\n    function init(Person p) {\n        self.got = p.name;\n    }\n}\n\nclass B {\n    int got;\n\n    function init(int a, int b) {\n        self.got = a + b;\n    }\n}\n\npublic function main() returns error? {\n    json j = {name: \"ann\"};\n    A|B x = new (check value:cloneWithType(j));\n    io:println(x.got); // @output ann\n}\n"
+      },
+      "outputs": {
+        "jBallerina": "ERROR [u1.bal:(26:24,26:46)] cannot infer the 'typedesc' argument for parameter 't'",
+        "Nutcracker": "ann"
+      },
+      "suggestion": null
+    },
+    {
+      "id": "squash-named-types-refactor",
+      "severity": "nit",
+      "kind": "Commits",
+      "anchor": "pr",
+      "path": null,
+      "line": null,
+      "start_line": null,
+      "title": "2f7ac76f4 reworks 6ae4744c6's named-type code; squash it",
+      "body": "Read: 2f7ac76f4 renames helpers 6ae4744c6 adds (`resolveActionOrExpressionWithNamedTypes`, `UntypedFunctionSignature.NamedTypes`), moves `Param.NamedTypes` onto the signature and makes `common.NamedTypes` skip non-type refs. AGENTS.md wants such corrections as fixups, so squash it into 6ae4744c6.",
+      "code": null,
+      "outputs": null,
+      "suggestion": null
+    },
+    {
+      "id": "close-issues-1496-1498",
+      "severity": "nit",
+      "kind": "PR body",
+      "anchor": "pr",
+      "path": null,
+      "line": null,
+      "start_line": null,
+      "title": "Head fixes #1496, #1497 and #1498 but the body doesn't close them",
+      "body": "Measured: the repro tests from all three issues pass at bfe316b40 and fail at #1434's head (rest and default drop `@mark`, the constructor case panics). Add `Fixes #1496`, `Fixes #1497` and `Fixes #1498`, or say why they stay open.",
+      "code": null,
+      "outputs": null,
+      "suggestion": null
+    },
+    {
+      "id": "body-misses-bfe316b40",
+      "severity": "nit",
+      "kind": "PR body",
+      "anchor": "pr",
+      "path": null,
+      "line": null,
+      "start_line": null,
+      "title": "PR body doesn't describe bfe316b40's fix",
+      "body": "Measured: a default that calls a dependently-typed function declared later (`int val = inferred(0)` before `inferred`) fails on main with `INTERNAL_ERROR: function parameter type not found` and works at bfe316b40. Describe it like the separate 6c16fabfb fix.",
+      "code": null,
+      "outputs": null,
+      "suggestion": null
+    },
+    {
+      "id": "pr-body-template",
+      "severity": "nit",
+      "kind": "PR body",
+      "anchor": "pr",
+      "path": null,
+      "line": null,
+      "start_line": null,
+      "title": "PR body skips the template's Purpose, Approach and Checklist sections",
+      "body": "Read: the body uses Summary/Problem/How it's fixed/Changes headings instead of `.github/pull_request_template.md`'s `## Purpose` (with `Fixes #N` or a reason), `## Approach` and the checklist. Map the existing text onto those sections.",
+      "code": null,
+      "outputs": null,
+      "suggestion": null
+    }
+  ]
+}
