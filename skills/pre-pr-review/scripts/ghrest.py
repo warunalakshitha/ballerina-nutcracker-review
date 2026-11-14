@@ -8,6 +8,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 
 REPO = os.environ.get("REVIEW_REPO", "ballerina-nutcracker/ballerina")
@@ -149,7 +150,8 @@ def _merge_queue_rest(open_numbers, branch):
     try:
         refs = api(f"repos/{REPO}/git/matching-refs/heads/gh-readonly-queue/{branch}/") or []
         head = api(f"repos/{REPO}/branches/{branch}")["commit"]["sha"]
-    except GhError:
+    except GhError as e:
+        print(f"merge queue: REST fallback failed too: {e}", file=sys.stderr)
         return None
     by_base = {}
     for r in refs:

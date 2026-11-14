@@ -1,0 +1,52 @@
+name: Refresh report tables
+
+# Keeps the open-PR tables in reports/latest.md current: after each round's report, and hourly in between.
+# Runs with the reviewer's token, where GraphQL works, so the merge queue is read reliably.
+on:
+  push:
+    branches: [main]
+    paths: ["reports/latest.md"]
+  schedule:
+    - cron: "45 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-tables
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Rebuild the tables
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_POST_TOKEN }}
+          REVIEWER: warunalakshitha
+        run: python3 skills/pre-pr-review/scripts/refresh_tables.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "warunalakshitha"
+          git config user.email "warudanu@gmail.com"
+          git add reports/latest.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -q -m "chore(review): refresh report tables"
+          for i in 1 2 3 4 5; do
+            if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi
+            git rebase --abort 2>/dev/null || true
+            git reset -q --hard origin/main
+            python3 skills/pre-pr-review/scripts/refresh_tables.py || exit 1
+            git add reports/latest.md
+            git diff --cached --quiet && exit 0
+            git commit -q -m "chore(review): refresh report tables"
+            sleep 5
+          done
+          exit 1
