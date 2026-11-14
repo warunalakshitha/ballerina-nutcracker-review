@@ -1,0 +1,54 @@
+name: Post queued reviews
+
+# Cloud review rounds can't write to ballerina-nutcracker/ballerina, so they queue each review, issue
+# and comment in outbox/ on main; this posts them as the reviewer (secret REVIEW_POST_TOKEN).
+on:
+  push:
+    branches: [main]
+    paths: ["outbox/*.json"]
+  workflow_dispatch:
+
+concurrency:
+  group: post-outbox
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Post queued items
+        id: post
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_POST_TOKEN }}
+          REVIEWER: warunalakshitha
+        run: |
+          git pull -q --ff-only origin main
+          python3 skills/pre-pr-review/scripts/post_outbox.py
+
+      - name: Record what was posted
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A outbox
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -q -m "chore(review): post queued reviews"
+          for i in 1 2 3 4 5; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
+
+      - name: Fail if anything wasn't posted
+        if: steps.post.outcome == 'failure'
+        run: |
+          echo "Some queued items weren't posted; see outbox/posted.log. They stay queued for the next run."
+          exit 1

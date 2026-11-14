@@ -47,6 +47,7 @@ The runner clears `$SP` (except `reports/`), `$SP/wt` worktrees and `refs/review
 - `ready_table.py`: open-PR totals, then Can merge (in merge queue, ready or after CI) and Cannot merge (with reason) tables, oldest PR first.
 - `post_review.py`: posts or updates a review from `findings.json` (dry run by default, `--post` to post).
 - `stack.py`: the stack a PR belongs to.
+- `post_outbox.py`: posts the reviews, issues and comments a cloud round queued in `outbox/`; run by `.github/workflows/post-outbox.yml` with the `REVIEW_POST_TOKEN` secret, because cloud sessions can't write to ballerina-nutcracker/ballerina.
 - `round_lock.py`: the cloud round lock (`reports/round.lock`), hourly heartbeat, skip-if-unchanged check and report push. See `references/cloud-round.md`.
 
 Repo rules (AGENTS.md, docs, the repo's own skills) are read from ballerina-nutcracker/ballerina `main` at review time; only the review skill lives here.
