@@ -19,7 +19,7 @@ Review rounds run in a Claude Code cloud session (claude.ai/code), started by th
 From here on, every way the round ends (a failed gate, a usage limit, an error, a lost lock) must release the lock with `$L release "$STARTED"`, unless `finish` (§6) ran.
 
 ## 3. Setup
-- `SP=/tmp/review-sp`: create it and empty it except `reports/`.
+- `SP=/tmp/review-sp`: create it and empty it except `reports/`, and in `reports/` keep only the 10 newest files (the environment keeps them between runs).
 - `REPO` = a full clone of https://github.com/ballerina-nutcracker/ballerina at `~/ballerina-lang-go`, `UPSTREAM=origin`.
 - `JBALLERINA_SRC` = a clone of https://github.com/ballerina-platform/ballerina-lang at `~/ballerina-lang`, checked out at tag `v2201.14.1` to match `bal` (shallow is fine).
 - Tools, pinned: Go 1.27.1 (the `go.mod` toolchain line), Ballerina 2201.14.1 (`bal version`), golangci-lint 2.15.0 and actionlint built with that Go, wrk, hyperfine, python3, shellcheck. The environment's setup script installs all of them and is cached, so normally just check the versions. Only if one is missing or wrong, install it the way the setup script does (it's quoted in the README), and say so under tooling gaps in the report so the setup script gets fixed:
