@@ -1,6 +1,6 @@
 # Cloud review round
 
-Review rounds run in a Claude Code cloud session (claude.ai/code), on a schedule (06:00, 12:00, 18:00, 00:00 Asia/Colombo) or by hand, never on the user's Mac. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Same procedure as a local `run-round.sh` round: follow `routine.md` exactly.
+Review rounds run in a Claude Code cloud session (claude.ai/code), on a schedule (06:00, 12:00, 18:00, 00:00 Asia/Colombo) or by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Same procedure as a Mac round: follow `routine.md` exactly.
 
 `L` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_lock.py`. It keeps the round lock (`reports/round.lock` on `main`) and commits only from its own worktree, so never commit in `$TOOLS` yourself.
 

@@ -1,6 +1,6 @@
-# Review round (local)
+# Review round
 
-You coordinate one review round for ballerina-nutcracker/ballerina, unattended, on the user's Mac, started by `scripts/run-round.sh`. Nothing from earlier runs survives except what is on GitHub (and the saved reports, which you don't read).
+You coordinate one review round for ballerina-nutcracker/ballerina, unattended, normally in a Claude Code cloud session set up by `references/cloud-round.md`, or as a fallback on the user's Mac, started by `scripts/run-round.sh`. Nothing from earlier runs survives except what is on GitHub (and the saved reports, which you don't read).
 
 ## 0. Setup
 1. Paths (exported by the runner; these are the defaults):
