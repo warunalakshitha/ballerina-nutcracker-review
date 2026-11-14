@@ -14,6 +14,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
   ```bash
   #!/bin/bash
   set -e
+  export PATH="/usr/local/go/bin:/root/go/bin:$PATH"
   curl -fsSL -o /tmp/bal.deb https://dist.ballerina.io/downloads/2201.14.1/ballerina-2201.14.1-swan-lake-linux-x64.deb
   apt-get install -y /tmp/bal.deb && rm -f /tmp/bal.deb
   apt-get update && apt-get install -y wrk hyperfine shellcheck
@@ -21,7 +22,9 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
   go env -w GOTOOLCHAIN=go1.27.1
   go version
   # Lint tools must be built with that Go, or golangci-lint refuses the module.
-  GOBIN=/usr/local/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 github.com/rhysd/actionlint/cmd/actionlint@latest
+  # One go install per tool: Go refuses packages from different modules or versions in one command.
+  GOBIN=/usr/local/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+  GOBIN=/usr/local/bin go install github.com/rhysd/actionlint/cmd/actionlint@latest
   bal version && golangci-lint --version && actionlint --version
   ```
 - **One round at a time:** `reports/round.lock` on `main`, updated hourly while a round runs. A run skips when the PR scan matches `reports/last-scan.txt` from the last round.

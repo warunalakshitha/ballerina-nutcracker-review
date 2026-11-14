@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Replace the open-PR tables in reports/latest.md with fresh ones from ready_table.py.
 
-Run by .github/workflows/refresh-tables.yml after each round pushes its report, with the reviewer's token, where
+Run by .github/workflows/refresh-tables.yml after each round pushes its report (it writes only if the tables
+changed), with the reviewer's token, where
 GraphQL (and so the merge queue) works, unlike in cloud sessions. Only the block from the `**Open PRs:` line up
 to `## This round` changes; the round's own sections stay as written. A first line saying when the tables were
 refreshed is kept just above them. Exits 1 without touching the report if ready_table.py fails.
@@ -28,11 +29,14 @@ def main():
     if start < 0 or end < start:
         print("reports/latest.md has no tables block to replace")
         return 1
+    tables = r.stdout.rstrip("\n") + "\n\n"
+    if text[start:end] == tables:
+        print("tables unchanged; report left as is")
+        return 0
     head = text[:start]
     if STAMP in head:
         head = head[:head.rindex(STAMP)]
     colombo = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d %H:%M")
-    tables = r.stdout.rstrip("\n") + "\n\n"
     open(REPORT, "w").write(head + f"{STAMP}{colombo} (Asia/Colombo)._\n\n" + tables + text[end:])
     print(f"tables refreshed at {colombo}")
     return 0

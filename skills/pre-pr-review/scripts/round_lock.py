@@ -15,8 +15,10 @@ All lock commits are made in a separate worktree ($LOCK_WT), never in the $TOOLS
                                             exit 3 if the lock is no longer ours (stop posting)
   round_lock.py wait-outbox [minutes]       wait (default 15 min) until the Action has emptied outbox/;
                                             exit 1 if items are still there (not posted, or failed)
-  round_lock.py finish <STARTED> <report> <scan file>
-                                            commit the report and the scan, drop the lock, push
+  round_lock.py finish <STARTED> <report> <end scan> <start scan>
+                                            commit the report and the saved scan, drop the lock, push.
+                                            The saved scan keeps only end-scan lines that were also in the
+                                            start scan: a PR pushed during the round must look new next time
 """
 import os
 import signal
@@ -231,8 +233,10 @@ def wait_outbox(minutes="15"):
         time.sleep(30)
 
 
-def finish(started, report, scan_file):
+def finish(started, report, scan_file, start_file):
     stop_heartbeat()
+    start = {l.strip() for l in open(start_file) if l.strip()}
+    saved = "".join(l for l in open(scan_file) if l.strip() and l.strip() in start)
     text = open(report).read()
     text = text[text.index("# "):] if "# " in text else text
     for _ in range(5):
@@ -244,7 +248,7 @@ def finish(started, report, scan_file):
         with open(os.path.join(WT, "reports/latest.md"), "w") as f:
             f.write(text)
         with open(os.path.join(WT, SCAN), "w") as f:
-            f.write(open(scan_file).read())
+            f.write(saved)
         if lock is not None:
             git("rm", "-q", LOCK)
         if commit_push(f"chore(review): add {started} round report", "reports/latest.md", SCAN, LOCK):
@@ -255,7 +259,7 @@ def finish(started, report, scan_file):
 def main():
     cmd, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
     commands = {"status": (status, 0), "unchanged": (unchanged, 1), "take": (take, 2), "beat": (beat, 1), "heartbeat": (heartbeat, 1),
-                "release": (release, 1), "finish": (finish, 3), "queue": (queue, 3), "wait-outbox": (wait_outbox, 1)}
+                "release": (release, 1), "finish": (finish, 4), "queue": (queue, 3), "wait-outbox": (wait_outbox, 1)}
     if cmd == "wait-outbox" and not args:
         return wait_outbox()
     if cmd not in commands or len(args) != commands[cmd][1]:
