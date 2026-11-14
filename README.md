@@ -7,7 +7,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 
 ## How rounds run
 
-- **Poller:** `.github/workflows/poll-prs.yml` runs `poll_prs.py` every 15 minutes (no Claude usage). It starts the routine through its API trigger (secrets `ROUTINE_FIRE_URL`, `ROUTINE_FIRE_TOKEN`) only when a settled PR has changes we haven't reviewed, no round holds the lock, and it hasn't started a round for the same scan in the last 6 hours (`reports/poller-fired.txt`).
+- **Poller:** `.github/workflows/poll-prs.yml` runs `poll_prs.py` hourly at :07 (no Claude usage). It starts the routine through its API trigger (secrets `ROUTINE_FIRE_URL`, `ROUTINE_FIRE_TOKEN`) only when a settled PR has changes we haven't reviewed, no round holds the lock, and it hasn't started a round for the same scan in the last 6 hours (`reports/poller-fired.txt`).
 - **Schedule:** the same routine also runs at 06:00, 12:00, 18:00 and 00:00 Asia/Colombo as a backup (it starts a few minutes late); those runs skip when nothing changed. It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`.
 - **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`, and this setup script (cached between runs):
 
