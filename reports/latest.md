@@ -1,6 +1,6 @@
-# Review round · 2026-11-14 07:33
+# Review round · 2026-11-14 12:07
 
-origin/main `cbe12629d` · skills `8e75eee` · ended 2026-11-14 08:24 · tooling gaps: the review agent couldn't start clean-context verifier subagents, so it re-ran each repro itself at the tip, base and main
+`origin/main` cbe12629d · skills ded7d34 · ended 2026-11-14 12:31 · tooling gaps: none (go 1.27.1, bal 2201.14.1, golangci-lint 2.15.0, actionlint 1.7.12, shellcheck 0.9.0, wrk, hyperfine)
 
 **Open PRs: 68** · can merge: 4 (? in merge queue, 4 ready, 0 after CI) · cannot merge: 61 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
@@ -13,7 +13,7 @@ Couldn't read the merge queue; a queued PR shows as `ready` here.
 | PR | Title | Author | Approval | Auto-merge | Status |
 |---|---|---|---|---|---|
 | [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | review required | — | ready |
-| [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | review required | on (rebase, heshanpadmasiri) | ready |
+| [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | approved | — | ready |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and query selects | heshanpadmasiri | review required | — | ready |
 | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | ready |
 
@@ -72,7 +72,7 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 | [#1612](https://github.com/ballerina-nutcracker/ballerina/pull/1612) | chore(lint): enforce module lint tiers | heshanpadmasiri | — | open findings: 1 Nit |
 | [#1613](https://github.com/ballerina-nutcracker/ballerina/pull/1613) | chore(lint): require production use of functions in strict m | heshanpadmasiri | — | open findings: 1 Verify, 1 Nit |
 | [#1614](https://github.com/ballerina-nutcracker/ballerina/pull/1614) | chore(lint): enforce shallow declaration checks and fix find | heshanpadmasiri | — | CI failed: codecov/patch, Ubuntu WASM Build |
-| [#1623](https://github.com/ballerina-nutcracker/ballerina/pull/1623) | ci(nightly): add nightly flake sniffer and actionlint | heshanpadmasiri | — | open findings: 5 Nits |
+| [#1623](https://github.com/ballerina-nutcracker/ballerina/pull/1623) | ci(nightly): add nightly flake sniffer and actionlint | heshanpadmasiri | — | open findings: 2 Nits |
 | [#1624](https://github.com/ballerina-nutcracker/ballerina/pull/1624) | ci(release): publish an automatic patch release every night | heshanpadmasiri | — | open findings: 1 Important, 3 Nits |
 | [#1625](https://github.com/ballerina-nutcracker/ballerina/pull/1625) | ci: check stdlib coverage docs before push | TharmiganK | — | base #1584 already merged; rebase onto main |
 | [#1626](https://github.com/ballerina-nutcracker/ballerina/pull/1626) | fix(desugar): check service on-clause variables for errors | heshanpadmasiri | — | CI failed: Ubuntu WASM Build |
@@ -87,39 +87,45 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 | [#1661](https://github.com/ballerina-nutcracker/ballerina/pull/1661) | fix(types): accept actions as query let clause initializers | heshanpadmasiri | — | CI failed: Ubuntu WASM Build |
 | [#1662](https://github.com/ballerina-nutcracker/ballerina/pull/1662) | fix(nodebuilder): lower resource signatures in object types | heshanpadmasiri | — | open findings: 2 Verify, 3 Nits |
 
+## Drafts and held (3)
+
+Not reviewed until the PR is marked ready or the label is removed.
+
+| PR | Title | Author | Why |
+|---|---|---|---|
+| [#1137](https://github.com/ballerina-nutcracker/ballerina/pull/1137) | feat(stdlib): add `ballerina/constraint` standard library | TharmiganK | draft |
+| [#1357](https://github.com/ballerina-nutcracker/ballerina/pull/1357) | feat(http): bind query, header and payload resource paramete | TharmiganK | draft |
+| [#1430](https://github.com/ballerina-nutcracker/ballerina/pull/1430) | feat(stdlib): add `ballerina/zip` standard library | TharmiganK | draft |
+
 ## This round
 
 | PR | Verdict | New Important/Verify | Summary |
 |---|---|---|---|
-| #1434 | NOT READY: 2 Nits (`Fixes #1527`, PR body template). This was a refresh: the diff is unchanged, and #1434 was checked against the skill rules added since f59f4d4 with no new findings. 8 fixed, 1 answered | none | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1434#issuecomment-6506053463) |
-| #1435 | NOT READY: 1 Verify, 4 Nits (squash 2f7ac76f4 into 6ae4744c6, `Fixes #1496/#1497/#1498`, body doesn't describe bfe316b40, body template). 3 fixed | Verify: `new` on a union of classes now accepts dependently-typed arguments, which subset10.md lists as unsupported (`type_resolver.go:786`). Is that intended? | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1435#issuecomment-6720717565) |
-
-The stack #1434 → #1435 was reviewed as one unit at `bfe316b40`.
+| #1623 | READY except approval (2 new Nits; all 5 earlier items fixed) | none | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1623#issuecomment-6789513854) |
 
 ## Skipped
-
-- #1189, #1221, #1238: the worker stack. #1189 conflicts with main.
-- #1233: conflicting.
-- #1263: conflicting.
-- #1481: conflicting.
-- #1625: its base branch's PR (#1584) is already merged, and its own commits conflict with main. It needs a rebase.
+- #1189: conflicts with main (bottom of stack #1189 → #1221 → #1238)
+- #1221, #1238: stacked on conflicting #1189
+- #1233, #1263, #1481: conflict with main
+- #1625: base branch `ci/langlib-coverage-pre-push` (#1584) is already merged and the PR conflicts with main; needs a rebase onto main
 
 ## Filed issues
+None.
 
-None. The out-of-scope bug the agent found is already filed as #1648 (a parameter default that calls its own function overflows the stack). The agent also noted that bfe316b40 makes dependently-typed callees hit the same path.
-
-## Review-skill updates
-
-None. Neither PR changes AGENTS.md, skills, lint config, hooks or CI.
+## Review-skill updates (from #1623, not applied)
+- SKILL.md "CI workflow PRs": once #1623 is on main, rely on the `Lint workflows` check at head (path-filtered, not required; note if missing) and run actionlint locally only for mutation proofs.
+- New rule next to "Release scripts": for PRs touching `.github/scripts/{cpu_load,collect_failures}.py`, rely on CI's `test_cpu_load.py`/`test_collect_failures.py` run (nightly-flake-sniffer.yml path filter) except for mutations.
+- agent-instructions.md known-flaky line already names `nightly-flake-sniffer-failure`: no change.
 
 ## Retrospective inputs
 
 | PR | Kind | Description | Link |
 |---|---|---|---|
-| #1434 | missed | heshanpadmasiri raised a design objection that annotation data is spread across several side tables and per-stage caches, and suggested one env table instead. Our "data smuggled past accessors" check didn't trigger | https://github.com/ballerina-nutcracker/ballerina/pull/1434 |
-| #1435 | missed | CodeRabbit: nil-conditional forwarding dropped named types (now fixed) | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
-| #1435 | missed | CodeRabbit: record-field and function-type parameter default providers dropped named types. We missed it in the 1078f0ea5 round (fixed at head; the thread is still open) | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
-| #1435 | lint candidate | A PR-body check that lists open issues whose repro now passes, so a missing `Fixes #N` gets caught | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
-| #1435 | lint candidate | Check the "unsupported" bullets in subset docs against new passing tests | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+| #1623 | missed | CodeRabbit: interleaved output from 3 concurrent `go test` processes can misattribute tests/seeds in `collect_failures.py` | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
+| #1623 | missed | CodeRabbit: `cpu_load.py` opens the log after `Popen`; a failed open leaks the child | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
+| #1623 | missed | Our earlier round missed that package-level repro commands drop the runner's `-skip`/`-timeout` (raised now as a new Nit) | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
+| #1623 | wasted | 4-minute corpus timing run to support a 10m-timeout claim that didn't hold | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
+| #1623 | lint candidate | Test that `collect_failures` repro commands include `run_native_tests.SKIP_PATTERN` and `TIMEOUT` | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
+| #1623 | recurring | PR body not in template format (Goals/Design), same as #1638, #1640 | https://github.com/ballerina-nutcracker/ballerina/pull/1623 |
 
-Flaky: `corpus/lib/subset3/task-misfire1-v.bal` failed once and passed when rerun.
+Note: the #1623 summary marker's `skill=f9513c71` matched no committed SKILL.md in the tools repo (likely hashed from a local uncommitted copy); the agent did a full re-review with the current skill.
