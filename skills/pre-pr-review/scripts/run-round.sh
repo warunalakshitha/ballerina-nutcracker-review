@@ -49,8 +49,16 @@ cleanup() {
 cleanup
 trap cleanup EXIT
 
-mkdir -p "$SP/review-out" "$SP/reports"
 START="$(TZ=Asia/Colombo date '+%Y-%m-%d %H:%M')"
+
+# Rounds normally run in the cloud (cloud-round.md); share their lock so the two never run at once.
+LOCK=(python3 "$TOOLS/skills/pre-pr-review/scripts/round_lock.py")
+"${LOCK[@]}" take "$START" "mac:$(hostname -s)" || { echo "another round holds reports/round.lock; not starting" >&2; exit 1; }
+"${LOCK[@]}" heartbeat "$START"
+on_exit() { "${LOCK[@]}" release "$START" >/dev/null 2>&1 || true; cleanup; }
+trap on_exit EXIT
+
+mkdir -p "$SP/review-out" "$SP/reports"
 report="$SP/reports/$(TZ=Asia/Colombo date +%Y%m%d-%H%M).md"
 
 prompt="Run one PR review round. Follow $TOOLS/skills/pre-pr-review/references/routine.md exactly.

@@ -1,45 +1,19 @@
 # ballerina-nutcracker-review
 
-PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina), used for local review rounds.
+PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina). Review rounds run in Claude Code cloud sessions on a schedule; skill fixes are made locally and pushed here.
 
 - `skills/pr-review/`: the review checklist (`SKILL.md`) and companion checklists (stdlib, LS, workflow).
-- `skills/pre-pr-review/`: agent rules (`references/agent-instructions.md`), the round procedure (`references/routine.md`), the posting format (`references/github-posting.md`), the retrospective (`references/retrospective.md`) and scripts.
+- `skills/pre-pr-review/`: agent rules (`references/agent-instructions.md`), the round procedure (`references/routine.md`), the cloud setup (`references/cloud-round.md`), the posting format (`references/github-posting.md`), the retrospective (`references/retrospective.md`) and scripts.
 
-## Prerequisites
+## How rounds run
 
-macOS with [Homebrew](https://brew.sh). Install:
-
-```bash
-brew install gh go golangci-lint wrk hyperfine actionlint shellcheck
-gh auth login            # the account the reviews are posted from
-```
-
-| Tool | Used for | Required |
-|---|---|---|
-| `claude` ([Claude Code](https://claude.com/claude-code), at `~/.local/bin/claude`) | runs the round | yes |
-| `gh`, logged in | reading PRs and posting reviews | yes |
-| `git`, `python3` (macOS system ones are fine) | worktrees, scripts | yes |
-| `go` (version from the repo's `go.mod` toolchain line) | building and testing PRs | yes |
-| `bal` ([Ballerina](https://ballerina.io/downloads/), jBallerina) | parity checks (`bal run`) | yes |
-| `wrk`, `hyperfine` | `compiler-tools` benchmark tests, which fail without them (CI installs both) | yes |
-| `golangci-lint` (same version as CI, see `.github/workflows/golangci-lint.yml`) | `make lint` / `make lint-module/<m>` | recommended |
-| `actionlint`, `shellcheck` | PRs that change `.github/workflows/*.yml` | recommended |
-
-`run-round.sh` checks the required ones and stops with `missing: <tool>` if one isn't on `PATH`.
-
-Local clones:
-
-- `~/Dev/Git/ballerina-lang-go`: a clone of the repo with a remote (default `pr730remote`) pointing at `ballerina-nutcracker/ballerina`.
-- `~/Dev/Git/ballerina-lang`: a clone of `ballerina-platform/ballerina-lang` (jBallerina source) for parity questions.
-
-## Running a round
-
-`skills/pre-pr-review/scripts/run-round.sh [extra instructions]` starts a headless Claude session that follows `routine.md`.
-
-- Override `REPO`, `UPSTREAM`, `SP` and `JBALLERINA_SRC` via the environment.
-- Keep the Mac on power: `caffeinate -is` blocks system sleep only on AC, and a closed lid still sleeps without an external display.
-
-The runner clears `$SP` (except `reports/`), `$SP/wt` worktrees and `refs/review/*` before and after each round. It saves `$SP/reports/<timestamp>.md` and copies it to `reports/latest.md`, which is tracked: commit it after each round. The report's **Retrospective inputs** section feeds `references/retrospective.md`, which you run interactively.
+- **Schedule:** a claude.ai routine at 06:00, 12:00, 18:00 and 00:00 Asia/Colombo (it starts a few minutes late). It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`.
+- **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`; the setup script installs Ballerina 2201.14.1, wrk, hyperfine and shellcheck. Go 1.27.1 comes through the module proxy (`GOTOOLCHAIN`), golangci-lint and actionlint are built with it.
+- **One round at a time:** `reports/round.lock` on `main`, updated hourly while a round runs. A run skips when the PR scan matches `reports/last-scan.txt` from the last round.
+- **Posting:** cloud sessions can read ballerina-nutcracker/ballerina but not write to it. Rounds queue reviews, issues and comments in `outbox/`; the `post-outbox` Action posts them as the reviewer with the `REVIEW_POST_TOKEN` secret (a classic token with `public_repo`) and logs each in `outbox/posted.log`.
+- **GitHub access for the routine:** the Claude GitHub App, installed on this repo only.
+- **Mac fallback:** `skills/pre-pr-review/scripts/run-round.sh [extra instructions]` runs a round locally if the cloud can't (needs `claude`, `gh`, `go`, `bal`, `wrk`, `hyperfine` on `PATH`, `~/Dev/Git/ballerina-lang-go` with a `pr730remote` remote and `~/Dev/Git/ballerina-lang`; keep the Mac on power). It posts directly with your `gh` login and copies the report to `reports/latest.md` for you to commit. It respects the cloud lock: it stops if a round is running and holds the lock while it runs.
+- **Reports:** each round pushes `reports/latest.md`. Its **Retrospective inputs** section feeds `references/retrospective.md`, which you run interactively.
 
 ## Scripts (`skills/pre-pr-review/scripts/`)
 
