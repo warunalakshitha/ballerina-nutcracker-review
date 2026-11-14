@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replace the open-PR tables in reports/latest.md with fresh ones from ready_table.py.
 
-Run by .github/workflows/refresh-tables.yml after each round's report and hourly, with the reviewer's token, where
+Run by .github/workflows/refresh-tables.yml after each round pushes its report, with the reviewer's token, where
 GraphQL (and so the merge queue) works, unlike in cloud sessions. Only the block from the `**Open PRs:` line up
 to `## This round` changes; the round's own sections stay as written. A first line saying when the tables were
 refreshed is kept just above them. Exits 1 without touching the report if ready_table.py fails.

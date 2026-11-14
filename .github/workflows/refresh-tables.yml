@@ -1,13 +1,11 @@
 name: Refresh report tables
 
-# Keeps the open-PR tables in reports/latest.md current: after each round's report, and hourly in between.
-# Runs with the reviewer's token, where GraphQL works, so the merge queue is read reliably.
+# Rebuilds the open-PR tables in reports/latest.md right after each round pushes its report, with the
+# reviewer's token, where GraphQL works, so the merge queue is read reliably (cloud sessions can't).
 on:
   push:
     branches: [main]
     paths: ["reports/latest.md"]
-  schedule:
-    - cron: "45 * * * *"
   workflow_dispatch:
 
 concurrency:
