@@ -35,8 +35,14 @@ STALE = timedelta(hours=2)  # no heartbeat for this long: the round is dead
 BEAT = int(os.environ.get("LOCK_BEAT_SECONDS", "3600"))
 
 
+# Commits show the reviewer as author and committer (the cloud session's git is set up as Claude).
+AUTHOR = os.environ.get("REVIEW_GIT_AUTHOR", "warunalakshitha <warudanu@gmail.com>")
+
+
 def git(*args, check=True):
-    return subprocess.run(["git", "-C", WT, *args], capture_output=True, text=True, check=check)
+    name, email = AUTHOR.rsplit(" <", 1)
+    ident = ["-c", f"user.name={name}", "-c", f"user.email={email.rstrip('>')}"]
+    return subprocess.run(["git", "-C", WT, *ident, *args], capture_output=True, text=True, check=check)
 
 
 def sync():
@@ -67,6 +73,7 @@ def is_stale(lock):
 
 
 def write(lock):
+    os.makedirs(os.path.join(WT, os.path.dirname(LOCK)), exist_ok=True)
     with open(os.path.join(WT, LOCK), "w") as f:
         f.writelines(f"{k}={v}\n" for k, v in lock.items())
 
