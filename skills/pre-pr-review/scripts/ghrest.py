@@ -64,6 +64,17 @@ def skipped_by_label(pr):
     return any(any(k in label["name"].lower() for k in DONT_MERGE) for label in pr.get("labels", []))
 
 
+def pushed_at(sha):
+    """When a commit became a PR head, as a UTC datetime: the earliest check suite on it (CI starts on push,
+    and rebases or amends make new commits), else the commit's committer date if CI hasn't started yet."""
+    from datetime import datetime
+    suites = (api(f"repos/{REPO}/commits/{sha}/check-suites?per_page=100") or {}).get("check_suites", [])
+    times = [s["created_at"] for s in suites if s.get("created_at")]
+    if not times:
+        times = [api(f"repos/{REPO}/commits/{sha}")["commit"]["committer"]["date"]]
+    return datetime.fromisoformat(min(times).replace("Z", "+00:00"))
+
+
 def pr_detail(n):
     """Single-PR REST payload; `mergeable` is computed lazily by GitHub, so retry while it's null."""
     for _ in range(4):

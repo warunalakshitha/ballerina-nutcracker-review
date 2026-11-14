@@ -1,6 +1,6 @@
 # Cloud review round
 
-Review rounds run in a Claude Code cloud session (claude.ai/code), on a schedule (06:00, 12:00, 18:00, 00:00 Asia/Colombo) or by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Same procedure as a Mac round: follow `routine.md` exactly.
+Review rounds run in a Claude Code cloud session (claude.ai/code), started by the `poll-prs` Action when a settled PR changed, on a backup schedule (06:00, 12:00, 18:00, 00:00 Asia/Colombo) or by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Same procedure as a Mac round: follow `routine.md` exactly.
 
 `L` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_lock.py`. It keeps the round lock (`reports/round.lock` on `main`) and commits only from its own worktree, so never commit in `$TOOLS` yourself.
 
@@ -22,9 +22,9 @@ From here on, every way the round ends (a failed gate, a usage limit, an error, 
 - `SP=/tmp/review-sp`: create it and empty it except `reports/`.
 - `REPO` = a full clone of https://github.com/ballerina-nutcracker/ballerina at `~/ballerina-lang-go`, `UPSTREAM=origin`.
 - `JBALLERINA_SRC` = a clone of https://github.com/ballerina-platform/ballerina-lang at `~/ballerina-lang`, checked out at tag `v2201.14.1` to match `bal` (shallow is fine).
-- Tools, pinned: Go from the `go.mod` toolchain line (1.27.1), Ballerina 2201.14.1 (`bal version`), golangci-lint at the version in `.github/workflows/golangci-lint.yml` (2.15.0), wrk, hyperfine, python3, actionlint, shellcheck. Install what's missing: apt as root, `https://dist.ballerina.io/downloads/2201.14.1/ballerina-2201.14.1-swan-lake-linux-x64.deb`, or the official release downloads.
-  - Go: go.dev and dl.google.com are blocked, but the module proxy serves toolchains: `go env -w GOTOOLCHAIN=go1.27.1` (the preinstalled Go downloads it on first use).
-  - golangci-lint and actionlint must be built with that Go, or lint refuses the module: `GOTOOLCHAIN=go1.27.1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 github.com/rhysd/actionlint/cmd/actionlint@latest`, then copy both from `$(go env GOPATH)/bin` to `/usr/local/bin` so they come first on PATH.
+- Tools, pinned: Go 1.27.1 (the `go.mod` toolchain line), Ballerina 2201.14.1 (`bal version`), golangci-lint 2.15.0 and actionlint built with that Go, wrk, hyperfine, python3, shellcheck. The environment's setup script installs all of them and is cached, so normally just check the versions. Only if one is missing or wrong, install it the way the setup script does (it's quoted in the README), and say so under tooling gaps in the report so the setup script gets fixed:
+  - Go: go.dev and dl.google.com are blocked, but the module proxy serves toolchains (`go env -w GOTOOLCHAIN=go1.27.1`).
+  - golangci-lint and actionlint must be built with Go 1.27.1, or lint refuses the module: `GOTOOLCHAIN=go1.27.1 GOBIN=/usr/local/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 github.com/rhysd/actionlint/cmd/actionlint@latest`.
 
 ## 4. Gate
 If any check fails, stop: review nothing, post nothing, release the lock, report what failed.

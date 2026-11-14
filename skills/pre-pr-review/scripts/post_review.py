@@ -293,6 +293,8 @@ def main():
     opts = ap.parse_args()
     post, allow_moved = opts.post, opts.allow_moved_head
     data = json.load(open(opts.findings))
+    if data.get("pending_subtasks"):
+        sys.exit("Not posted: findings.json still has pending_subtasks (verifications the coordinator hasn't run yet).")
     out = opts.out or os.path.join(os.path.dirname(os.path.abspath(opts.findings)), "pr-comment.md")
     repo, num = data["repo"], data["pr"]
     owner, name = repo.split("/")
