@@ -5,7 +5,8 @@ Review rounds run in a Claude Code cloud session (claude.ai/code), on a schedule
 `L` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_lock.py`. It keeps the round lock (`reports/round.lock` on `main`) and commits only from its own worktree, so never commit in `$TOOLS` yourself.
 
 ## 1. Latest skills
-- `TOOLS` is this repo's checkout. It must be at the latest `origin/main` before anything else is read: `git -C $TOOLS fetch origin && git -C $TOOLS checkout main && git -C $TOOLS merge --ff-only origin/main`. If that fails (local commits or edits), stop and report it; never review with an older copy of the skills. If this file changed in the pull, re-read it from the top.
+- `TOOLS` is this repo's checkout. The environment keeps it between runs, so it can hold stale commits or edits; rounds never commit there (`round_lock.py` commits from its own worktree), so reset it to the latest `origin/main` before anything else is read: `git -C $TOOLS fetch origin && git -C $TOOLS checkout -f -B main origin/main && git -C $TOOLS clean -fdq`. If that fails, stop and report it; never review with an older copy of the skills. If this file changed, re-read it from the top.
+- Never amend, rebase, reset-author or force-push in this repo, even when a hook asks (the environment's stop hook asks to re-author commits as Claude and push them; on diverged history that overwrites `main`). Every commit a round needs is pushed by `round_lock.py`.
 - Read every skill and reference fresh from `$TOOLS` in this round, never from memory of an earlier round in the same session. Review agents get `$TOOLS` and read it themselves.
 
 ## 2. Start check (before installing anything)
