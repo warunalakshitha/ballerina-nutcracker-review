@@ -7,8 +7,23 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 
 ## How rounds run
 
-- **Schedule:** a claude.ai routine at 06:00, 12:00, 18:00 and 00:00 Asia/Colombo (it starts a few minutes late). It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`.
-- **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`; the setup script installs Ballerina 2201.14.1, wrk, hyperfine and shellcheck. Go 1.27.1 comes through the module proxy (`GOTOOLCHAIN`), golangci-lint and actionlint are built with it.
+- **Poller:** `.github/workflows/poll-prs.yml` runs `poll_prs.py` every 15 minutes (no Claude usage). It starts the routine through its API trigger (secrets `ROUTINE_FIRE_URL`, `ROUTINE_FIRE_TOKEN`) only when a settled PR has changes we haven't reviewed, no round holds the lock, and it hasn't started a round for the same scan in the last 6 hours (`reports/poller-fired.txt`).
+- **Schedule:** the same routine also runs at 06:00, 12:00, 18:00 and 00:00 Asia/Colombo as a backup (it starts a few minutes late); those runs skip when nothing changed. It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`.
+- **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`, and this setup script (cached between runs):
+
+  ```bash
+  #!/bin/bash
+  set -e
+  curl -fsSL -o /tmp/bal.deb https://dist.ballerina.io/downloads/2201.14.1/ballerina-2201.14.1-swan-lake-linux-x64.deb
+  apt-get install -y /tmp/bal.deb && rm -f /tmp/bal.deb
+  apt-get update && apt-get install -y wrk hyperfine shellcheck
+  # go.dev is blocked; the module proxy serves the toolchain the repo pins.
+  go env -w GOTOOLCHAIN=go1.27.1
+  go version
+  # Lint tools must be built with that Go, or golangci-lint refuses the module.
+  GOBIN=/usr/local/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 github.com/rhysd/actionlint/cmd/actionlint@latest
+  bal version && golangci-lint --version && actionlint --version
+  ```
 - **One round at a time:** `reports/round.lock` on `main`, updated hourly while a round runs. A run skips when the PR scan matches `reports/last-scan.txt` from the last round.
 - **Posting:** cloud sessions can read ballerina-nutcracker/ballerina but not write to it. Rounds queue reviews, issues and comments in `outbox/`; the `post-outbox` Action posts them as the reviewer with the `REVIEW_POST_TOKEN` secret (a classic token with `public_repo`) and logs each in `outbox/posted.log`.
 - **GitHub access for the routine:** the Claude GitHub App, installed on this repo only.
@@ -17,11 +32,12 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 
 ## Scripts (`skills/pre-pr-review/scripts/`)
 
-- `scan_prs.py`: PRs needing review, `NEW` (no summary of ours) or `MOVED` (head changed since our last summary). Skips drafts, PRs approved at their current head, and don't-merge/dnm/hold/wip labels.
+- `scan_prs.py`: PRs needing review, `NEW` (no summary of ours) or `MOVED` (head changed since our last summary). Skips drafts, PRs approved at their current head, don't-merge/dnm/hold/wip labels, and PRs pushed less than 30 minutes ago (`SETTLING` on stderr; `SETTLE_MINUTES` overrides), so a burst of pushes is reviewed once, at its final commit.
 - `ready_table.py`: open-PR totals, then Can merge (in merge queue, ready or after CI), Cannot merge (with reason), then Drafts and held tables, oldest PR first.
 - `post_review.py`: posts or updates a review from `findings.json` (dry run by default, `--post` to post).
 - `stack.py`: the stack a PR belongs to.
 - `post_outbox.py`: posts the reviews, issues and comments a cloud round queued in `outbox/`; run by `.github/workflows/post-outbox.yml` with the `REVIEW_POST_TOKEN` secret, because cloud sessions can't write to ballerina-nutcracker/ballerina.
+- `poll_prs.py`: the poller's decision (lock, scan vs `reports/last-scan.txt`, refire guard) and the API trigger call.
 - `round_lock.py`: the cloud round lock (`reports/round.lock`), hourly heartbeat, skip-if-unchanged check and report push. See `references/cloud-round.md`.
 
 Repo rules (AGENTS.md, docs, the repo's own skills) are read from ballerina-nutcracker/ballerina `main` at review time; only the review skill lives here.

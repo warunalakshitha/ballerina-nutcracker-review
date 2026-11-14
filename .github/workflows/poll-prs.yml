@@ -1,0 +1,45 @@
+name: Poll PRs
+
+# Starts a cloud review round (the routine's API trigger) only when a PR has settled with changes we
+# haven't reviewed and no round is running. Costs no Claude usage when there's nothing to do.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: poll-prs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Check for new work and start a round
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_POST_TOKEN }}
+          REVIEWER: warunalakshitha
+          ROUTINE_FIRE_URL: ${{ secrets.ROUTINE_FIRE_URL }}
+          ROUTINE_FIRE_TOKEN: ${{ secrets.ROUTINE_FIRE_TOKEN }}
+        run: python3 skills/pre-pr-review/scripts/poll_prs.py
+
+      - name: Record the round it started
+        run: |
+          git add -A -- reports/poller-fired.txt 2>/dev/null || true
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name "warunalakshitha"
+          git config user.email "warudanu@gmail.com"
+          git commit -q -m "chore(review): note the round the poller started"
+          for i in 1 2 3 4 5; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
