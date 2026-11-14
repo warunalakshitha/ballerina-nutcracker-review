@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Post the GitHub writes a cloud round queued in outbox/ (run by .github/workflows/post-outbox.yml).
+"""Post the GitHub writes a cloud round sent (run by .github/workflows/post-outbox.yml).
 
-Cloud rounds can't write to ballerina-nutcracker/ballerina, so they commit each write to outbox/ on main
-and this script posts it with the reviewer's token (GH_TOKEN, an Actions secret). Items:
+Cloud rounds can't write to ballerina-nutcracker/ballerina, so they send each write as a repository_dispatch; the
+workflow unpacks it into outbox/ in its own checkout (never committed) and this script posts it with the
+reviewer's token (GH_TOKEN, an Actions secret). Items:
   review-<N>.json         a findings.json: post_review.py --post
   issue-<slug>.json       {"title", "body", "labels": [...]}: a new issue
   issue-comment-<slug>.json  {"issue": N, "body"}: a comment on an issue or PR
 
 A posted item is deleted. A review whose PR moved since it was reviewed is dropped (the next round
 re-reviews). Anything else that fails stays for the next run, and the script exits 1 so the job fails.
-Each line of outbox/posted.log records what happened; only the newest 100 lines are kept (the rest are in git history). Issues and comments carry a hidden marker so a
+Each item's outcome is printed to the Action's run log (and outbox/posted.log in the runner, which is thrown away). Issues and comments carry a hidden marker so a
 retry after a partly finished run doesn't post them twice.
 """
 import datetime
@@ -94,6 +95,10 @@ def main():
         name = os.path.basename(path)
         kind = (post_review if name.startswith("review-") else post_comment if name.startswith("issue-comment-")
                 else post_issue if name.startswith("issue-") else None)
+        if name.startswith("ping-"):
+            log(f"ping {name}: dispatch received")
+            os.remove(path)
+            continue
         if kind is None:
             log(f"skipped {name}: unknown item type")
             continue

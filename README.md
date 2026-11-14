@@ -1,14 +1,14 @@
 # ballerina-nutcracker-review
 
-PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina). Review rounds run in Claude Code cloud sessions on a schedule; skill fixes are made locally and pushed here.
+PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina): the review skills and scripts. Review rounds run in Claude Code cloud sessions and never commit here; skill fixes are made locally and pushed here.
 
 - `skills/pr-review/`: the review checklist (`SKILL.md`) and companion checklists (stdlib, LS, workflow).
 - `skills/pre-pr-review/`: agent rules (`references/agent-instructions.md`), the round procedure (`references/routine.md`), the cloud setup (`references/cloud-round.md`), the posting format (`references/github-posting.md`), the retrospective (`references/retrospective.md`) and scripts.
 
 ## How rounds run
 
-- **Poller:** `.github/workflows/poll-prs.yml` runs `poll_prs.py` hourly at :07 (no Claude usage). It starts the routine through its API trigger (secrets `ROUTINE_FIRE_URL`, `ROUTINE_FIRE_TOKEN`) only when a settled PR has changes we haven't reviewed, no round holds the lock, and it hasn't started a round for the same scan in the last 6 hours (`reports/poller-fired.txt`).
-- **Schedule:** the same routine also runs at 06:00, 12:00, 18:00 and 00:00 Asia/Colombo as a backup (it starts a few minutes late); those runs skip when nothing changed. It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`.
+- **Routine:** a claude.ai routine runs hourly. It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`, and stops within a minute when no PR changed since the last round.
+- **Review board:** the [Nutcracker Review Board](https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1) artifact holds the latest report (open-PR tables, what each round reviewed), earlier reports, and the round's lock and last scan. Rounds write it with `ArtifactData`; nothing is committed to this repo.
 - **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`, and this setup script (cached between runs):
 
   ```bash
@@ -27,12 +27,11 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
   GOBIN=/usr/local/bin go install github.com/rhysd/actionlint/cmd/actionlint@latest
   bal version && golangci-lint --version && actionlint --version
   ```
-- **One round at a time:** `reports/round.lock` on `main`, updated hourly while a round runs. A run skips when the PR scan matches `reports/last-scan.txt` from the last round.
-- **Posting:** cloud sessions can read ballerina-nutcracker/ballerina but not write to it. Rounds queue reviews, issues and comments in `outbox/`; the `post-outbox` Action posts them as the reviewer with the `REVIEW_POST_TOKEN` secret (a classic token with `public_repo`) and logs each in `outbox/posted.log`.
+- **One round at a time:** the lock is `state/lock` on the board, created with a version check so only one session gets it, and refreshed at least hourly while a round runs. A run skips when the PR scan matches `state/scan` from the last round.
+- **Posting:** cloud sessions can read ballerina-nutcracker/ballerina but not write to it. Rounds send each review, issue and comment as a `repository_dispatch` (`round_state.py send`); the `post-outbox` Action posts it as the reviewer with the `REVIEW_POST_TOKEN` secret (a classic token with `public_repo`). Nothing is committed; failed runs email the repo owner.
 - **GitHub access for the routine:** the Claude GitHub App, installed on this repo only.
-- **Mac fallback:** `skills/pre-pr-review/scripts/run-round.sh [extra instructions]` runs a round locally if the cloud can't (needs `claude`, `gh`, `go`, `bal`, `wrk`, `hyperfine` on `PATH`, `~/Dev/Git/ballerina-lang-go` with a `pr730remote` remote and `~/Dev/Git/ballerina-lang`; keep the Mac on power). It posts directly with your `gh` login and copies the report to `reports/latest.md` for you to commit. It respects the cloud lock: it stops if a round is running and holds the lock while it runs.
-- **Report tables:** `.github/workflows/refresh-tables.yml` rebuilds the open-PR tables in `reports/latest.md` (`refresh_tables.py`) right after each round pushes its report, with the reviewer's token, so merge-queue PRs show correctly (cloud sessions can't read the queue).
-- **Reports:** each round pushes `reports/latest.md`. Its **Retrospective inputs** section feeds `references/retrospective.md`, which you run interactively.
+- **Mac fallback:** `skills/pre-pr-review/scripts/run-round.sh [extra instructions]` runs a round locally if the cloud can't (needs `claude`, `gh`, `go`, `bal`, `wrk`, `hyperfine` on `PATH`, `~/Dev/Git/ballerina-lang-go` with a `pr730remote` remote and `~/Dev/Git/ballerina-lang`; keep the Mac on power). It shares the board's lock, scan and report and posts directly with your `gh` login.
+- **Reports:** each report's **Retrospective inputs** section feeds `references/retrospective.md`, which you run interactively.
 
 ## Scripts (`skills/pre-pr-review/scripts/`)
 
@@ -40,8 +39,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 - `ready_table.py`: open-PR totals, then Can merge (in merge queue, ready or after CI), Cannot merge (with reason), then Drafts and held tables, oldest PR first.
 - `post_review.py`: posts or updates a review from `findings.json` (dry run by default, `--post` to post).
 - `stack.py`: the stack a PR belongs to.
-- `post_outbox.py`: posts the reviews, issues and comments a cloud round queued in `outbox/`; run by `.github/workflows/post-outbox.yml` with the `REVIEW_POST_TOKEN` secret, because cloud sessions can't write to ballerina-nutcracker/ballerina.
-- `poll_prs.py`: the poller's decision (lock, scan vs `reports/last-scan.txt`, refire guard) and the API trigger call.
-- `round_lock.py`: the cloud round lock (`reports/round.lock`), hourly heartbeat, skip-if-unchanged check and report push. See `references/cloud-round.md`.
+- `post_outbox.py`: posts a review, issue or comment a round sent; run by `.github/workflows/post-outbox.yml` with the `REVIEW_POST_TOKEN` secret.
+- `round_state.py`: scan comparison (`unchanged`, `saved-scan`), `send` (dispatch to the post-outbox Action) and `wait-posted`. See `references/cloud-round.md`.
 
 Repo rules (AGENTS.md, docs, the repo's own skills) are read from ballerina-nutcracker/ballerina `main` at review time; only the review skill lives here.

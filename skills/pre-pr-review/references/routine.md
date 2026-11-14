@@ -35,7 +35,7 @@ Your final message is the report; it is what the user reads in the session, so m
 3. **This round** table, oldest PR first: PR | verdict | new Important/Verify findings (one line each) | summary link. Write "Nothing reviewed" if no PR needed review, and say why (e.g. all conflicting).
 4. **Skipped** (conflicting, not checked) and **Filed issues** as short lists, PR numbers in ascending order.
 5. **Review-skill updates** proposed by agents (PRs that change AGENTS.md, skills, lint config, hooks or CI validators): list them for the user; don't apply them. These skip retrospective.md §3: they follow a rule the repo adopted, not a miss of ours.
-6. **Retrospective inputs**, one row per item, oldest PR first: PR | kind (missed: another reviewer raised it and we didn't / wrong: refuted or withdrawn / wasted / lint candidate / recurring) | one-line description | link. Collect them from the agents' final messages. Don't run retrospective.md in this round; the user runs it from `reports/latest.md`.
+6. **Retrospective inputs**, one row per item, oldest PR first: PR | kind (missed: another reviewer raised it and we didn't / wrong: refuted or withdrawn / wasted / lint candidate / recurring) | one-line description | link. Collect them from the agents' final messages. Don't run retrospective.md in this round; the user runs it from the report on the Nutcracker Review Board.
 
 ## Limits
 - If posting a PR's review fails, put its findings (title, path:line, body) in the report so the user can post them by hand.

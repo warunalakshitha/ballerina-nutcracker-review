@@ -1,19 +1,18 @@
 name: Post queued reviews
 
-# Cloud review rounds can't write to ballerina-nutcracker/ballerina, so they queue each review, issue
-# and comment in outbox/ on main; this posts them as the reviewer (secret REVIEW_POST_TOKEN).
+# Cloud review rounds can't write to ballerina-nutcracker/ballerina, so they send each review, issue and comment
+# here as a repository_dispatch (round_state.py send); this posts it as the reviewer with REVIEW_POST_TOKEN.
+# Nothing is committed: the run log is the record, and a failed run emails the repo owner.
 on:
-  push:
-    branches: [main]
-    paths: ["outbox/*.json"]
-  workflow_dispatch:
+  repository_dispatch:
+    types: [post-item]
 
 concurrency:
   group: post-outbox
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   post:
@@ -24,32 +23,22 @@ jobs:
         with:
           ref: main
 
-      - name: Post queued items
-        id: post
-        continue-on-error: true
+      - name: Unpack the item
+        run: |
+          python3 - <<'EOF'
+          import base64, gzip, json, os, re, sys
+          p = json.load(open(os.environ["GITHUB_EVENT_PATH"]))["client_payload"]
+          name = p.get("name", "")
+          if not re.fullmatch(r"(review|issue|issue-comment|ping)-[A-Za-z0-9_.-]+\.json", name):
+              sys.exit(f"refusing item name {name!r}")
+          blob = "".join(p[f"p{i}"] for i in range(int(p["parts"])))
+          os.makedirs("outbox", exist_ok=True)
+          open(os.path.join("outbox", name), "wb").write(gzip.decompress(base64.b64decode(blob)))
+          print(f"unpacked {name} from round {p.get('started', '?')}")
+          EOF
+
+      - name: Post it
         env:
           GH_TOKEN: ${{ secrets.REVIEW_POST_TOKEN }}
           REVIEWER: warunalakshitha
-        run: |
-          git pull -q --ff-only origin main
-          python3 skills/pre-pr-review/scripts/post_outbox.py
-
-      - name: Record what was posted
-        run: |
-          git config user.name "warunalakshitha"
-          git config user.email "warudanu@gmail.com"
-          mkdir -p outbox
-          git add -A -- outbox
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -q -m "chore(review): post queued reviews"
-          for i in 1 2 3 4 5; do
-            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
-            sleep 5
-          done
-          exit 1
-
-      - name: Fail if anything wasn't posted
-        if: steps.post.outcome == 'failure'
-        run: |
-          echo "Some queued items weren't posted; see outbox/posted.log. They stay queued for the next run."
-          exit 1
+        run: python3 skills/pre-pr-review/scripts/post_outbox.py

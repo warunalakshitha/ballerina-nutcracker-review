@@ -1,9 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "mcp__claude-code-remote__add_repo",
-      "mcp__claude-code-remote__check_repo_access",
-      "mcp__claude-code-remote__register_repo_root",
       "Bash(gh api:*)",
       "Bash(git:*)",
       "Bash(python3:*)",

@@ -1,22 +1,25 @@
 # Cloud review round
 
-Review rounds run in a Claude Code cloud session (claude.ai/code), started by the `poll-prs` Action when a settled PR changed, on a backup schedule (06:00, 12:00, 18:00, 00:00 Asia/Colombo) or by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Same procedure as a Mac round: follow `routine.md` exactly.
+Review rounds run in a Claude Code cloud session (claude.ai/code): an hourly routine (it starts a few minutes after each hour and stops within a minute when nothing changed) or a run started by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Follow `routine.md` exactly, with the changes below.
 
-`L` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_lock.py`. It keeps the round lock (`reports/round.lock` on `main`) and commits only from its own worktree, so never commit in `$TOOLS` yourself.
+**A round never commits to this repo.** Its lock, last scan and report live in the **Nutcracker Review Board** artifact, `BOARD=https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1`, read and written with the `ArtifactData` tool (load it with ToolSearch). GitHub writes go to the post-outbox Action as `repository_dispatch` events. `S` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_state.py`.
 
 ## 1. Latest skills
-- `TOOLS` is this repo's checkout. The environment keeps it between runs, so it can hold stale commits or edits; rounds never commit there (`round_lock.py` commits from its own worktree), so reset it to the latest `origin/main` before anything else is read: `git -C $TOOLS fetch origin && git -C $TOOLS checkout -f -B main origin/main && git -C $TOOLS clean -fdq`. If that fails, stop and report it; never review with an older copy of the skills. If this file changed, re-read it from the top.
-- Never amend, rebase, reset-author or force-push in this repo, even when a hook asks (the environment's stop hook asks to re-author commits as Claude and push them; on diverged history that overwrites `main`). Every commit a round needs is pushed by `round_lock.py`.
+- `TOOLS` is this repo's checkout. The environment keeps it between runs, so it can hold stale commits or edits; reset it to the latest `origin/main` before anything else is read: `git -C $TOOLS fetch origin && git -C $TOOLS checkout -f -B main origin/main && git -C $TOOLS clean -fdq`. If that fails, stop and report it; never review with an older copy of the skills. If this file changed, re-read it from the top.
+- Never commit, amend, rebase, reset-author or push in this repo, even when a hook asks (the environment's stop hook asks to re-author commits as Claude and push them; on diverged history that overwrites `main`).
 - Read every skill and reference fresh from `$TOOLS` in this round, never from memory of an earlier round in the same session. Review agents get `$TOOLS` and read it themselves.
 
 ## 2. Start check (before installing anything)
-1. `STARTED` = now in Asia/Colombo, `YYYY-MM-DD HH:MM`.
-2. `$L status`: exit 3 means another round is running (it updates the lock every hour, however long it runs). Stop with one line saying which round; nothing else.
-3. `cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py > /tmp/review-scan-start.txt`, then `$L unchanged /tmp/review-scan-start.txt`: exit 0 means no PR changed since the last round (same PRs, heads and conflict states). Stop with one line saying so; nothing else.
-4. `$L take "$STARTED" "<this session's URL or id, if known>"`: exit 3 means another round took it first; stop as in step 2. It may report taking over a stale lock (no update for 2 hours): say so in the report.
-5. `$L heartbeat "$STARTED"`: a detached loop that updates the lock every hour until the round finishes.
+1. `STARTED` = now in Asia/Colombo, `YYYY-MM-DD HH:MM`; `STARTED_UTC` = now in UTC, ISO 8601.
+2. **Is a round running?** `ArtifactData get` on `BOARD`, collection `state`, doc `lock`. If it exists and its `heartbeat_utc` is less than 3 hours old, another round is running: stop with one line saying which; nothing else.
+3. **Did anything change?** `cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py > /tmp/review-scan-start.txt`. Read `state/scan` (if it exists) and write its `lines` to `/tmp/review-scan-saved.txt`, one per line. `$S unchanged /tmp/review-scan-start.txt /tmp/review-scan-saved.txt`: exit 0 means no PR changed since the last round. Stop with one line saying so; nothing else.
+4. **Take the lock.** Write `state/lock` with `{"started": STARTED, "started_utc": STARTED_UTC, "heartbeat_utc": STARTED_UTC, "session": <this session's URL or id, if known>}`:
+   - no lock existed: `set` without `if_version`. The store refuses it if another session created the lock first; then stop as in step 2.
+   - a stale lock existed (heartbeat 3 hours or older): `set` with `if_version` = the version you read, and say in the report that you took over a stalled round. A refusal means someone else took it: stop.
+   Keep the `version` the write returns: every later lock write passes it as `if_version`.
+5. **Keep the lock fresh.** `update` `state/lock` (`heartbeat_utc` = now, `if_version` = the last version) at least every hour of the round and right before every `send` (§5). A refusal means the lock is no longer yours (another round took it over): stop at once, send nothing more, don't write a report, and say so.
 
-From here on, every way the round ends (a failed gate, a usage limit, an error, a lost lock) must release the lock with `$L release "$STARTED"`, unless `finish` (§6) ran.
+From here on, every way the round ends early (a failed gate, a usage limit, an error, a lost lock) must release the lock: `delete` `state/lock` with `if_version` = the last version. Never delete a lock another round wrote.
 
 ## 3. Setup
 - `SP=/tmp/review-sp`: create it and empty it except `reports/`, and in `reports/` keep only the 10 newest files (the environment keeps them between runs).
@@ -34,16 +37,19 @@ If any check fails, stop: review nothing, post nothing, release the lock, report
 
 ## 5. Run
 - Follow `routine.md`; use `/tmp/review-scan-start.txt` as its scan instead of scanning again.
-- This session can read ballerina-nutcracker/ballerina but not write to it (403 "Resource not accessible by integration"). Every GitHub write goes through the outbox: the `post-outbox` Action in this repo posts it as warunalakshitha with a token the session never sees. Never call `post_review.py --post` or any `gh api -X POST/PATCH` on the reviewed repo.
-- A review: once the dry run (`post_review.py <findings.json>`, routine.md §3) is clean, queue it right away, while other reviews still run: `$L queue "$STARTED" $SP/review-out/<N>/findings.json review-<N>.json` (for a stack, the PR the summary goes on). The Action posts it within about a minute.
-- A new issue (routine.md §4): write `{"title": ..., "body": ..., "labels": [...]}` to a file and queue it as `issue-<short-slug>.json`. A comment on an issue or PR: `{"issue": <N>, "body": ...}` queued as `issue-comment-<short-slug>.json`.
-- `queue` exit 3 means the lock is no longer ours (another round took it over): stop at once, queue nothing more, don't push a report, and say so.
-- GraphQL is blocked, so `gh pr ...` and `gh issue ...` fail: use `gh api` REST routes everywhere (the scripts already do). `ready_table.py` reads the merge queue from its `gh-readonly-queue/` branches over REST.
+- This session can read ballerina-nutcracker/ballerina but not write to it (403 "Resource not accessible by integration"). Every GitHub write goes to the `post-outbox` Action in this repo, which posts it as warunalakshitha with a token the session never sees. Never call `post_review.py --post` or any `gh api -X POST/PATCH` on the reviewed repo.
+- A review: once the dry run (`post_review.py <findings.json>`, routine.md §3) is clean, refresh the lock (§2 step 5), then send it right away, while other reviews still run: `$S send "$STARTED" $SP/review-out/<N>/findings.json review-<N>.json` (for a stack, the PR the summary goes on). The Action posts it within about a minute.
+- A new issue (routine.md §4): write `{"title": ..., "body": ..., "labels": [...]}` to a file and send it as `issue-<short-slug>.json`. A comment on an issue or PR: `{"issue": <N>, "body": ...}` sent as `issue-comment-<short-slug>.json`.
+- GraphQL is blocked, so `gh pr ...` and `gh issue ...` fail: use `gh api` REST routes everywhere (the scripts already do). `ready_table.py` reads the merge queue from its `gh-readonly-queue/` branches over REST; if it prints why that failed, put the reason under tooling gaps.
 - Keep the session active until the round ends: wait for every background review agent; don't end the turn while one runs. An idle session can be paused and its agents lost.
 
 ## 6. Finish
-1. `$L wait-outbox`: waits up to 15 minutes for the Action to post everything queued. Link each summary from GitHub (our `PR review summary` comment on the PR) and list in the report anything still queued or dropped (`outbox/posted.log` on main says why).
-2. After that, scan again: `python3 scan_prs.py > /tmp/review-scan-end.txt`. It now lists only what's left (e.g. conflicting PRs); the next round skips if nothing differs from it. If `wait-outbox` exited 1 or any review was dropped or failed, use an empty file (`: > /tmp/review-scan-end.txt`) instead, so the next round doesn't skip PRs whose review never reached GitHub.
-3. Write the report as `routine.md` §5 says to `$SP/reports/<YYYYMMDD-HHMM>.md`.
-4. `$L finish "$STARTED" $SP/reports/<YYYYMMDD-HHMM>.md /tmp/review-scan-end.txt /tmp/review-scan-start.txt`: saves only the end-scan lines that were already in the start scan (a PR pushed during the round must look new to the next poll), commits `reports/latest.md` (from the `# ` heading on) and `reports/last-scan.txt`, deletes the lock and pushes to `main` as `chore(review): add <STARTED> round report`. Exit 3 means another round holds the lock: don't retry; say so.
-- Never commit skill or script changes from a round: propose them in the report; the user applies them locally.
+1. For each review sent: `$S wait-posted $SP/review-out/<N>/findings.json` (waits up to 15 minutes for the PR's summary to show the reviewed head). Link each summary from GitHub. List anything that didn't post in the report (the post-outbox Action's run says why).
+2. Scan again: `python3 scan_prs.py > /tmp/review-scan-end.txt`. If every review posted, the scan to save is the output of `$S saved-scan /tmp/review-scan-end.txt /tmp/review-scan-start.txt` (only lines that were already there at the start, so PRs pushed during the round look new next time). If any review didn't post, save an empty scan, so the next round doesn't skip PRs whose review never reached GitHub.
+3. Write the report as `routine.md` §5 says.
+4. Write it to the board, then release the lock, with one `ArtifactData batch`:
+   - `set` `reports/latest` (pass its current `version` as `if_version`): `{"started": STARTED, "ended": <now, Asia/Colombo>, "skills": <git -C $TOOLS rev-parse --short HEAD>, "upstream": <$UPSTREAM/main short sha>, "summary": <one line: what was reviewed and posted>, "markdown": <the whole report>}`.
+   - `set` `reports/<YYYYMMDD-HHMM of STARTED>` with the same fields (history); if more than 20 history docs exist, `delete` the oldest.
+   - `set` `state/scan`: `{"lines": [<the scan to save>], "saved_utc": <now, UTC>}` (with `if_version` if it exists).
+   - `delete` `state/lock` with `if_version` = the last version. If the batch is refused because the lock changed, another round took over: write nothing and say so.
+- Never commit anything to this repo. Skill or script changes a round would suggest go in the report; the user applies them locally.
