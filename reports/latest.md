@@ -1,10 +1,10 @@
-# Review round · 2026-11-14 06:07
+# Review round · 2026-11-14 07:33
 
-`origin/main` cbe12629d · skills 7ec5b15 · ended 2026-11-14 06:37 · tooling: all pinned versions present (golangci-lint 2.15.0 built with go1.26 refused go1.27.1; the agent built a per-PR copy with GOTOOLCHAIN=go1.27.1) · **POSTING FAILED: HTTP 403 "Resource not accessible by integration" on ballerina-nutcracker/ballerina; nothing was posted.** The Gate checks only read access, so this was not caught earlier. Fix: install the Claude GitHub App on the repo or reconnect GitHub in claude.ai settings.
+origin/main `cbe12629d` · skills `8e75eee` · ended 2026-11-14 08:24 · tooling gaps: the review agent couldn't start clean-context verifier subagents, so it re-ran each repro itself at the tip, base and main
 
-**Open PRs: 68** · can merge: 5 (? in merge queue, 5 ready, 0 after CI) · cannot merge: 60 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
+**Open PRs: 68** · can merge: 4 (? in merge queue, 4 ready, 0 after CI) · cannot merge: 61 · drafts: 3 · held by label (don't-merge/dnm/hold/wip): 0
 
-## Can merge (5)
+## Can merge (4)
 
 Couldn't read the merge queue; a queued PR shows as `ready` here.
 
@@ -12,15 +12,14 @@ Couldn't read the merge queue; a queued PR shows as `ready` here.
 
 | PR | Title | Author | Approval | Auto-merge | Status |
 |---|---|---|---|---|---|
-| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | approved | — | ready |
 | [#1165](https://github.com/ballerina-nutcracker/ballerina/pull/1165) | fix(runtime): fill record field defaults in cloneWithType | warunalakshitha | review required | — | ready |
 | [#1254](https://github.com/ballerina-nutcracker/ballerina/pull/1254) | test(corpus): cover error-typed wildcards in query clauses | heshanpadmasiri | review required | on (rebase, heshanpadmasiri) | ready |
 | [#1255](https://github.com/ballerina-nutcracker/ballerina/pull/1255) | fix(nodebuilder): allow start actions in type casts and query selects | heshanpadmasiri | review required | — | ready |
 | [#1438](https://github.com/ballerina-nutcracker/ballerina/pull/1438) | feat(langlib): add array pop, shift, unshift, reduce and sort | warunalakshitha | review required | — | ready |
 
-## Cannot merge (60)
+## Cannot merge (61)
 
-open findings: 37 · CI failed: 8 · conflicting: 9 · stacked on conflicting: 2 · base already merged: 1 · stacked: 1 · awaiting re-review: 2
+open findings: 39 · CI failed: 9 · conflicting: 9 · stacked on conflicting: 2 · base already merged: 1 · stacked: 1
 
 Auto-merge on a PR here merges it once GitHub's requirements pass, open findings or not.
 
@@ -32,6 +31,7 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 | [#926](https://github.com/ballerina-nutcracker/ballerina/pull/926) | fix(semantics): analyze constant type descriptors separately | heshanpadmasiri | on (rebase, heshanpadmasiri) | open findings: 1 Nit |
 | [#985](https://github.com/ballerina-nutcracker/ballerina/pull/985) | perf(projects): fix parallelization issue | azinneera | — | open findings: 1 Important, 7 Nits |
 | [#1053](https://github.com/ballerina-nutcracker/ballerina/pull/1053) | fix(types): treat readonly class values as readonly | heshanpadmasiri | — | conflicting |
+| [#1098](https://github.com/ballerina-nutcracker/ballerina/pull/1098) | fix(semantics): widen unary - and ~ result to the basic type | heshanpadmasiri | — | CI failed: Windows Native Build, Ubuntu WASM Build, Ubuntu Native Build |
 | [#1188](https://github.com/ballerina-nutcracker/ballerina/pull/1188) | fix(nodebuilder): report '_' used as identifier as syntax er | heshanpadmasiri | on (rebase, heshanpadmasiri) | open findings: 1 Important, 1 Nit |
 | [#1189](https://github.com/ballerina-nutcracker/ballerina/pull/1189) | feat(worker): support worker message passing | heshanpadmasiri | — | conflicting |
 | [#1193](https://github.com/ballerina-nutcracker/ballerina/pull/1193) | fix(semantics): evaluate computed mapping keys as expression | heshanpadmasiri | — | open findings: 6 Nits |
@@ -47,8 +47,8 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 | [#1411](https://github.com/ballerina-nutcracker/ballerina/pull/1411) | feat(stdlib): add byte-stream and Server-Sent Event support  | TharmiganK | — | open findings: 1 Nit |
 | [#1415](https://github.com/ballerina-nutcracker/ballerina/pull/1415) | feat(data.xmldata): add `ballerina/data.xmldata` standard li | TharmiganK | — | open findings: 1 Important, 1 Verify, 7 Nits |
 | [#1422](https://github.com/ballerina-nutcracker/ballerina/pull/1422) | feat(stdlib): add `ballerina/data.yaml` standard library | TharmiganK | — | open findings: 1 Important, 1 Nit |
-| [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) | feat(runtime): expose annotations of nested field types | warunalakshitha | — | awaiting re-review: pushed since our review of `edf01a7bf` |
-| [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) | fix(semantics): carry annotations on inferred typedesc args | warunalakshitha | — | awaiting re-review: pushed since our review of `4a0cafb3c` |
+| [#1434](https://github.com/ballerina-nutcracker/ballerina/pull/1434) | feat(runtime): expose annotations of nested field types | warunalakshitha | — | open findings: 2 Nits |
+| [#1435](https://github.com/ballerina-nutcracker/ballerina/pull/1435) | fix(semantics): carry annotations on inferred typedesc args | warunalakshitha | — | open findings: 1 Verify, 4 Nits |
 | [#1437](https://github.com/ballerina-nutcracker/ballerina/pull/1437) | feat(stdlib): add `ballerina/cache` standard library | TharmiganK | — | open findings: 3 Nits |
 | [#1446](https://github.com/ballerina-nutcracker/ballerina/pull/1446) | feat(stdlib): add `ballerina/ftp` standard library | TharmiganK | — | open findings: 4 Nits |
 | [#1465](https://github.com/ballerina-nutcracker/ballerina/pull/1465) | fix(http): send http:Request message headers and type client | TharmiganK | — | open findings: 2 Nits |
@@ -89,51 +89,37 @@ Auto-merge on a PR here merges it once GitHub's requirements pass, open findings
 
 ## This round
 
-| PR | verdict | new Important/Verify | summary link |
+| PR | Verdict | New Important/Verify | Summary |
 |---|---|---|---|
-| #1434 | READY except approval (3 Nits: PR/commit level) | none | not posted (403); previewed below |
-| #1435 | READY except approval (5 Nits) | none | not posted (403); previewed below |
+| #1434 | NOT READY: 2 Nits (`Fixes #1527`, PR body template). This was a refresh: the diff is unchanged, and #1434 was checked against the skill rules added since f59f4d4 with no new findings. 8 fixed, 1 answered | none | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1434#issuecomment-6506053463) |
+| #1435 | NOT READY: 1 Verify, 4 Nits (squash 2f7ac76f4 into 6ae4744c6, `Fixes #1496/#1497/#1498`, body doesn't describe bfe316b40, body template). 3 fixed | Verify: `new` on a union of classes now accepts dependently-typed arguments, which subset10.md lists as unsupported (`type_resolver.go:786`). Is that intended? | [summary](https://github.com/ballerina-nutcracker/ballerina/pull/1435#issuecomment-6720717565) |
 
-Both reviewed as a stack at the tip, bfe316b40. #1434's own diff is unchanged (only re-split commits), so its summary was refreshed. #1435 got a full re-review. Earlier Important findings ("commit doesn't build") are FIXED on both. Every commit now builds.
-
-### Unposted findings (post by hand or let the next round post them)
-**#1434** (summary comment 6506053463):
-- 🔵 pr: 77084a87b only moves `namedTypeRef` + helpers added by f17c7c1d1 into `common/named_types.go`; squash with `--fixup=f17c7c1d1`.
-- 🔵 pr: 709a8640e fixes #1527 (head `{"s":"a","left":null,"n":5}`, main `{"s":"a"}`) but the body doesn't close it; add `Fixes #1527`.
-- 🔵 pr: body skips the template's Purpose/Approach/Checklist sections.
-
-**#1435** (summary comment 6720717565):
-- 🔵 `semantics/internal/types/type_resolver.go:9106-9107`: the named types for function-type parameter defaults are untested. A mutation to `nil` passes every test. Add `function (Person|error value = annotatedFieldsInferred()) returns string fnWithDefault = fieldsOf; io:println(fnWithDefault()); //@output active,age,dynamic,name` to `record-field-annotations-v`.
-- 🔵 pr: 2f7ac76f4 reworks what 6ae4744c6 adds; squash with `--fixup=6ae4744c6`.
-- 🔵 pr: the head fixes #1496, #1497 and #1498, but the body doesn't close them.
-- 🔵 pr: the body doesn't describe bfe316b40's fix (a later-declared dependently-typed callee caused INTERNAL_ERROR on the base) or the record-field/function-type defaults.
-- 🔵 pr: body skips the template's Purpose/Approach/Checklist sections.
-
-Full previews: `$SP/review-out/{1434,1435}/pr-comment.md` (cleared with the session). Because nothing was posted, the next round will re-review both PRs.
+The stack #1434 → #1435 was reviewed as one unit at `bfe316b40`.
 
 ## Skipped
-- #1189: conflicting with main.
-- #1221 and #1238: stacked on conflicting #1189.
+
+- #1189, #1221, #1238: the worker stack. #1189 conflicts with main.
 - #1233: conflicting.
 - #1263: conflicting.
 - #1481: conflicting.
-- #1625: conflicting; its base #1584 is already merged, so it needs a rebase onto main.
+- #1625: its base branch's PR (#1584) is already merged, and its own commits conflict with main. It needs a rebase.
 
 ## Filed issues
-None. The out-of-scope bug the agent found (a compiler stack overflow when a parameter default calls its own function) is already #1648. Suggest adding to #1648: with #1435's bfe316b40, a dependently-typed self-calling default (`function inferred(int val = inferred(0), typedesc retTy = <>)`) now overflows the stack too. On the base it gave INTERNAL_ERROR.
+
+None. The out-of-scope bug the agent found is already filed as #1648 (a parameter default that calls its own function overflows the stack). The agent also noted that bfe316b40 makes dependently-typed callees hit the same path.
 
 ## Review-skill updates
-None. Neither PR touches AGENTS.md, skills, lint config, hooks or CI.
 
-Proposed round-procedure fix (not applied):
-- Add a write-access check to cloud-round.md §4 Gate, for example a dry PATCH probe or `check_repo_access`. That way a round with read-only GitHub access stops before it reviews.
-- Note that the shared golangci-lint needs `GOTOOLCHAIN=go1.27.1` at install time.
+None. Neither PR changes AGENTS.md, skills, lint config, hooks or CI.
 
 ## Retrospective inputs
 
-| PR | kind | description | link |
+| PR | Kind | Description | Link |
 |---|---|---|---|
-| #1434 | missed | heshanpadmasiri's design objection to side tables and per-stage caches for annotation data (`declaredNamedTypes`, `TypeRef`, `typeDescCache`). Our "Data smuggled past accessors" check covers it, but we didn't raise it. | https://github.com/ballerina-nutcracker/ballerina/pull/1434 |
-| #1435 | missed | CodeRabbit: default providers passed `nil` named types. The last round missed it; it is fixed at the tip. | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
-| #1434 | lint candidate | Flag a later commit that only moves or renames symbols an earlier commit on the same PR added. | https://github.com/ballerina-nutcracker/ballerina/pull/1434 |
-| #1435 | lint candidate | Mutation check: flip each new `namedTypes` argument to `nil` and require a test to fail. | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+| #1434 | missed | heshanpadmasiri raised a design objection that annotation data is spread across several side tables and per-stage caches, and suggested one env table instead. Our "data smuggled past accessors" check didn't trigger | https://github.com/ballerina-nutcracker/ballerina/pull/1434 |
+| #1435 | missed | CodeRabbit: nil-conditional forwarding dropped named types (now fixed) | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+| #1435 | missed | CodeRabbit: record-field and function-type parameter default providers dropped named types. We missed it in the 1078f0ea5 round (fixed at head; the thread is still open) | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+| #1435 | lint candidate | A PR-body check that lists open issues whose repro now passes, so a missing `Fixes #N` gets caught | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+| #1435 | lint candidate | Check the "unsupported" bullets in subset docs against new passing tests | https://github.com/ballerina-nutcracker/ballerina/pull/1435 |
+
+Flaky: `corpus/lib/subset3/task-misfire1-v.bal` failed once and passed when rerun.
