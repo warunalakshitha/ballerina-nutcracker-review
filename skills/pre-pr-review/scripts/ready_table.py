@@ -17,7 +17,7 @@ import functools
 import re
 
 from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
-    skipped_by_label, summaries, unresolved_finding_threads
+    skipped_by_label, summaries, unresolved_finding_threads, changes_requested_by, unresolved_other_threads
 
 # Stack members share base PRs, so fetch each PR's detail once.
 detail = functools.lru_cache(maxsize=None)(pr_detail)
@@ -71,6 +71,12 @@ def why_not_ready(p, by_head):
         return "open findings" + (": " + ", ".join(counts) if counts else "")
     if unresolved_finding_threads(n):
         return "unresolved finding threads"
+    by = changes_requested_by(n)
+    if by:
+        return "changes requested by " + ", ".join(by)
+    other = unresolved_other_threads(n)
+    if other:
+        return "unresolved review threads: " + ", ".join(f"{k} {w}" for w, k in sorted(other.items()))
     failed, pending = ci_state(sha)
     if failed:
         return "CI failed: " + ", ".join(failed[:3])
@@ -85,7 +91,7 @@ def why_not_ready(p, by_head):
 
 
 # Order of the "Not ready" groups: what the PR author can act on first.
-GROUPS = ["open findings", "unresolved finding threads", "CI failed", "conflicting", "stacked on conflicting",
+GROUPS = ["open findings", "unresolved finding threads", "changes requested", "unresolved review threads", "CI failed", "conflicting", "stacked on conflicting",
           "base #", "base branch", "stacked", "awaiting re-review", "awaiting first review",
           "approved at head; our review is older", "mergeability unknown", "could not check"]
 GROUP_NAMES = {"base #": "base already merged", "base branch": "base branch has no open PR"}
@@ -155,7 +161,7 @@ def main():
     print(f"## Can merge ({len(mergeable)})\n")
     if queue_read is None:
         print("Couldn't read the merge queue; a queued PR shows as `ready` here.\n")
-    print("0 findings, no conflicts, reviewed at the current head, not waiting on another PR.\n")
+    print("0 findings, no changes requested, no unresolved review threads (ours, humans' or CodeRabbit's), no conflicts, reviewed at the current head, not waiting on another PR.\n")
     print("| PR | Title | Author | Approval | Auto-merge | Status |")
     print("|---|---|---|---|---|---|")
     for p, state, decision in mergeable:

@@ -107,6 +107,16 @@ def review_decision(n, head):
     return "APPROVED" if "APPROVED" in states else "REVIEW_REQUIRED"
 
 
+def changes_requested_by(n):
+    """Reviewers whose latest decisive review (approve / request changes / dismissed) requests changes.
+    GitHub keeps a change request in force across pushes until that reviewer approves or it's dismissed."""
+    latest = {}
+    for r in api(f"repos/{REPO}/pulls/{n}/reviews?per_page=100", paginate=True):
+        if r["state"] in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED"):
+            latest[r["user"]["login"]] = r["state"]
+    return sorted(u for u, s in latest.items() if s == "CHANGES_REQUESTED")
+
+
 def summaries(n):
     """Bodies of our "PR review summary" comments, least recently updated first, so [-1] is the one
     post_review.py edits (it updates the most recently updated summary)."""
@@ -199,15 +209,28 @@ def review_threads(n):
             after = rt["pageInfo"]["endCursor"]
 
 
+CODERABBIT = ("coderabbitai", "coderabbitai[bot]")
+
+
+def _unresolved_firsts(n):
+    comments = {c["id"]: c for c in api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)}
+    return [comments[i] for i, resolved in review_threads(n) if not resolved and i in comments]
+
+
 def unresolved_finding_threads(n):
     """Number of our finding threads (first comment ours with a finding marker) that aren't resolved."""
-    comments = {c["id"]: c for c in api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)}
-    count = 0
-    for first_id, resolved in review_threads(n):
-        first = comments.get(first_id)
-        if first and not resolved and first["user"]["login"] == ME and "pre-pr-review:finding" in first["body"]:
-            count += 1
-    return count
+    return sum(1 for c in _unresolved_firsts(n) if c["user"]["login"] == ME and "pre-pr-review:finding" in c["body"])
+
+
+def unresolved_other_threads(n):
+    """{"human": k, "CodeRabbit": m}: unresolved review threads someone else started (other bots are ignored)."""
+    counts = {}
+    for c in _unresolved_firsts(n):
+        login, kind = c["user"]["login"], c["user"].get("type")
+        who = "CodeRabbit" if login in CODERABBIT else "human" if kind == "User" and login != ME else None
+        if who:
+            counts[who] = counts.get(who, 0) + 1
+    return counts
 
 
 def ci_state(sha):
