@@ -158,7 +158,8 @@ def _merge_queue_rest(open_numbers, branch):
     entry ahead of it (the first on <branch>'s head), so following that chain from <branch> gives queue order.
     Branches of PRs that are no longer open can linger; they're skipped. State comes from the branch's CI."""
     try:
-        refs = api(f"repos/{REPO}/git/matching-refs/heads/gh-readonly-queue/{branch}/") or []
+        # No trailing slash: the cloud GitHub proxy rejects it ("Request path could not be canonicalized").
+        refs = api(f"repos/{REPO}/git/matching-refs/heads/gh-readonly-queue/{branch}") or []
         head = api(f"repos/{REPO}/branches/{branch}")["commit"]["sha"]
     except GhError as e:
         print(f"merge queue: REST fallback failed too: {e}", file=sys.stderr)
