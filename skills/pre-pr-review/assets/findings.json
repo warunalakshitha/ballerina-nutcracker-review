@@ -4,6 +4,7 @@
   "head_sha": "e55b77619b88febb49e1d3bc1a2eeff5c97ce2af",
   "reviewed_diff": "7fa3d9a06f75678ab102ada167b56e777fbb065e3a74b2fe573990148cfb9c82",
   "skill_version": "<sha256 of the review skill: pr-review/SKILL.md for open-PR rounds, see agent-instructions.md>",
+  "skill_commit": "<git -C $TOOLS rev-parse --short=9 HEAD>",
   "answered": [],
   "stack": {
     "prs": [

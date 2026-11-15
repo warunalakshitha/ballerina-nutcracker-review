@@ -161,6 +161,18 @@ def coderabbit_thread_counts(roots, threads):
     return unresolved, len(rabbit)
 
 
+def skill_commit(data):
+    """The review-skill commit the review ran on: findings.json's `skill_commit`, else this checkout's HEAD.
+    Not in the post-outbox Action, whose checkout is the latest main, not the round's commit."""
+    if data.get("skill_commit"):
+        return data["skill_commit"][:9]
+    if os.environ.get("GITHUB_ACTIONS"):
+        return ""
+    r = subprocess.run(["git", "-C", os.path.dirname(os.path.abspath(__file__)), "rev-parse", "--short=9", "HEAD"],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
 def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered=0):
     counts = {s: sum(1 for f in data["findings"] if f["severity"] == s) for s in SEVERITY_LABEL}
     count_text = " · ".join(f"{SEVERITY_BADGE[s]} **{n} {SEVERITY_LABEL[s]}{'s' if n > 1 and s == 'nit' else ''}**"
@@ -171,7 +183,10 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     status = f"{count_text} · reviewed `{data['head_sha'][:9]}`."
     if line := data["summary"].get("line", "").strip():
         status += f" {line}"
-    lines = [SUMMARY_MARKER.format(data["pr"], data["reviewed_diff"][:8], data["skill_version"][:8]),
+    marker = SUMMARY_MARKER.format(data["pr"], data["reviewed_diff"][:8], data["skill_version"][:8])
+    if commit := skill_commit(data):
+        marker = marker.replace(" -->", f" tools={commit} -->")
+    lines = [marker,
              f"## 🤖 PR review summary · #{data['pr']}", status]
     stack = data.get("stack")
     if stack and len(stack["prs"]) > 1:
