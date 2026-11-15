@@ -4,7 +4,7 @@
 Usage: patch_coverage.py [base-ref] [--no-corpus]
   base-ref defaults to origin/main (merge-base with HEAD is used).
 
-Runs `go test -covermode=atomic -coverpkg=<changed pkgs> <changed pkgs> ./corpus/...`
+Runs `go test -timeout=45m -covermode=atomic -coverpkg=<changed pkgs> <changed pkgs> ./corpus/...`
 and intersects the profile with the added/modified lines from `git diff -U0`.
 Prints a markdown table plus total, ready to paste into review-report.md.
 """
@@ -80,7 +80,7 @@ def main():
     coverpkg = ",".join(p + "/..." for p in pkgs)
     targets = [p + "/..." for p in pkgs] + ([] if no_corpus else ["./corpus/..."])
     prof = tempfile.NamedTemporaryFile(suffix=".out", delete=False).name
-    cmd = ["go", "test", "-count=1", "-covermode=atomic", f"-coverpkg={coverpkg}",
+    cmd = ["go", "test", "-count=1", "-timeout=45m", "-covermode=atomic", f"-coverpkg={coverpkg}",
            f"-coverprofile={prof}", *targets]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
