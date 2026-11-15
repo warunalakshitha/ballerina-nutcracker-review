@@ -7,8 +7,11 @@ on:
   repository_dispatch:
     types: [post-item]
 
+# One group per item: a group keeps only one pending run and cancels the older one, so a single shared group dropped
+# items a round sent in quick succession. Different items now post in parallel; a resend of the same item waits for
+# the running one, and only its newest pending copy is kept.
 concurrency:
-  group: post-outbox
+  group: post-outbox-${{ github.event.client_payload.name }}
   cancel-in-progress: false
 
 permissions:
