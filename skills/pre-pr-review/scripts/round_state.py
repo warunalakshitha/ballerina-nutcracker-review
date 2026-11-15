@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Helpers for cloud review rounds. Nothing here commits anything: the round keeps its lock, last scan and report
-in the Nutcracker Review Board artifact (via ArtifactData), and GitHub writes go to the post-outbox Action as
+in the Ballerina Nutcracker Pull Request Review Board artifact (via ArtifactData), and GitHub writes go to the post-outbox Action as
 repository_dispatch events.
 
   round_state.py unchanged <scan file> <saved scan file>

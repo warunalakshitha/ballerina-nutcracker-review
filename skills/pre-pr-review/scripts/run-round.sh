@@ -45,7 +45,7 @@ cleanup() {
   git -C "$REPO" for-each-ref --format='delete %(refname)' refs/review/ refs/pr-stack/ | git -C "$REPO" update-ref --stdin
   [[ -d "$SP" ]] || return 0
   find "$SP" -mindepth 1 -maxdepth 1 ! -name reports -exec rm -rf {} +
-  # Keep only the 10 newest saved reports (the Nutcracker Review Board artifact has the latest and its history).
+  # Keep only the 10 newest saved reports (the Ballerina Nutcracker Pull Request Review Board artifact has the latest and its history).
   if [[ -d "$SP/reports" ]]; then
     find "$SP/reports" -maxdepth 1 -type f -name '*.md' | sort -r | tail -n +11 | while read -r f; do rm -f "$f"; done
   fi
@@ -59,7 +59,7 @@ mkdir -p "$SP/review-out" "$SP/reports"
 report="$SP/reports/$(TZ=Asia/Colombo date +%Y%m%d-%H%M).md"
 
 prompt="Run one PR review round on this Mac (the fallback for cloud rounds). Follow $TOOLS/skills/pre-pr-review/references/routine.md exactly.
-Share the cloud rounds' lock, saved scan and report on the Nutcracker Review Board, exactly as cloud-round.md sections 2 and 6 describe (ArtifactData; stop if another round holds the lock; release it on every exit). Skip cloud-round.md's setup, gate and send steps: post directly with post_review.py --post (this Mac's gh can write) and never commit to $TOOLS.
+Share the cloud rounds' lock, saved scan and report on the Ballerina Nutcracker Pull Request Review Board, exactly as cloud-round.md sections 2 and 6 describe (ArtifactData; stop if another round holds the lock; release it on every exit). Skip cloud-round.md's setup, gate and send steps: post directly with post_review.py --post (this Mac's gh can write) and never commit to $TOOLS.
 REPO=$REPO TOOLS=$TOOLS UPSTREAM=$UPSTREAM SP=$SP JBALLERINA_SRC=$JBALLERINA_SRC
 STARTED=$START Asia/Colombo
 ${1:+Extra instructions for this round: $1}"

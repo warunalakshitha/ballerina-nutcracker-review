@@ -1,6 +1,6 @@
 # Review retrospective (coordinator, after each review round)
 
-The review skill improves only from its own misses. Run this interactively, not inside run-round.sh, from the **open items** on the Nutcracker Review Board (https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1): `ArtifactData query` of its `retro` collection where `status` is `open`. Each round adds its Retrospective inputs and Review-skill updates there, and they stay open, whichever report is current, until the user marks them added to the skill or rejected on the board (or tells you to, then `update` the item's `status` to `added` or `rejected` with its `if_version`). Collect what went wrong, turn each into a general rule or a lint, and prove the rule on a clean context before it lands.
+The review skill improves only from its own misses. Run this interactively, not inside run-round.sh, from the **open items** on the Ballerina Nutcracker Pull Request Review Board (https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1): `ArtifactData query` of its `retro` collection where `status` is `open`. Each round adds its Retrospective inputs and Review-skill updates there, and they stay open, whichever report is current, until the user marks them added to the skill or rejected on the board (or tells you to, then `update` the item's `status` to `added` or `rejected` with its `if_version`). Collect what went wrong, turn each into a general rule or a lint, and prove the rule on a clean context before it lands.
 
 ## 1. Collect misses
 
