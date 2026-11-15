@@ -208,7 +208,7 @@ Not findings:
 - **Process-doc additions by maintainers.** A maintainer adding a review criterion or rule to `AGENTS.md` or `.agents/skills/**` alongside a feature is deliberate process work, not unrelated scope. Check that the text is accurate; don't ask for a separate PR (#978).
 - **Deliberately conservative restrictions.** A rejection or unsupported path that a nearby code comment explains, and whose root cause is an open tracked issue, is a known limitation, not a defect, e.g. rejecting a worker reference in a join collection because joins are lowered per frame (#1047). Raise it only if the explanation is wrong, or if the restriction is user-visible and `doc/lang/subset10.md` doesn't mention it.
 - **Spec-shaped code.** Code whose structure and variable names follow a spec algorithm or rule step by step is not a readability or simplification Nit, even if a shorter form exists (#1201). Raise it only if it deviates from the spec text.
-- **Explicit case lists.** Don't suggest replacing an explicit list of enum or sum-type cases in a `switch` with `default:`. Listing every case is deliberate, so a new value forces a decision at each switch (#1609).
+- **Explicit case lists.** Don't suggest replacing an explicit list of enum or sum-type cases in a `switch` with `default:`. Listing every case is deliberate, so a new value forces a decision at each switch (#1609). Don't raise a missing case in a switch over a `//sumtype:decl` type when the module's config enables `gochecksumtype`: the linter fails it.
 
 #### Security
 
@@ -235,7 +235,9 @@ LLM-written code fails in predictable ways that a local read of the diff misses.
 
 Don't spend findings on what the linters already enforce: `make lint` (including walkpurity), and each module's `<module>/.golangci.yml` plus the `.golangci/*.yml` it links (for example `semantics/.golangci.yml` forbids `ast.Walk`, `Set*` on model/semtypes values and diagnostics queries in `internal/analysis`; depguard keeps `test_util` out of production code). Read that config before raising anything a linter could cover; tiers change, so don't rely on a list here. `unused` is disabled in every config, so nothing but `check_unused_symbols.py` (step 6) reports dead code. When a finding could be caught by a deterministic check next time, list it as a lint candidate in the final message.
 
-**Lint config PRs.** When a PR changes a module's tier, `.golangci*.yml` or `.golangci/*.yml`:
+**Lint config PRs.** When a PR changes a module's tier, `.golangci*.yml` or `.golangci/*.yml`, or adds a linter directive such as `//sumtype:decl`:
+
+- Run `scripts/check_golangci.py <base>`: duplicate linter entries, linters added to a tier but not to the hand-made module configs that copy it (regular files, not tier symlinks, e.g. `semantics/.golangci.yml`), and directives whose linter the module's config doesn't enable.
 
 - Once #1612 is on main, run `make lint-configs` and `python3 .github/scripts/test_check_lint_configs.py`. A module moved to a looser tier is a finding unless the PR explains it.
 - Lint each module that moves to a stricter tier with the PR merged into current main (`make lint-module/<name>`): main's new code may trip the new linters even though the PR head is clean (#1612).
