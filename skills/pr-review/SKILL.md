@@ -305,6 +305,7 @@ Flag:
 - Duplicative corpus tests or goldens that add no coverage (see below)
 - Files unrelated to the PR purpose
 - Orphaned helpers only referenced from deleted call sites
+- Tests for CI scripts that nothing runs: `scripts/check_ci_wiring.py <base>` lists added `.github/scripts/test_*` files no workflow, Makefile or hook names
 
 Use static reading + `go test` / build; mention `staticcheck` unused findings when available.
 
