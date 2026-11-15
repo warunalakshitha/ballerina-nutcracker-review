@@ -224,12 +224,12 @@ For every non-merge commit on `$MB..HEAD`:
   coverage output (`coverage_report.html`, `*.out`), scratch `_*.bal`, debug dumps,
   files unrelated to the intent.
 - New corpus tests go in the open subset. Subsets 1–9 are released (subset9
-  shipped with 0.6.0), so a **new** `.bal` under `corpus/bal/subset[1-9]/` is a
-  Nit: move it to `corpus/bal/subset10/10-<same area>/`, with its goldens
-  (`ast`/`cfg`/`desugared`/`bir`) and `corpus/integration` `.txtar`. Editing,
-  renaming or re-marking an existing test in an old subset is fine. List them
-  with `git diff --name-status --diff-filter=A <base>...HEAD -- 'corpus/bal/subset[1-9]/*.bal'`
-  (for a stack, attribute each file to the PR that added it).
+  shipped with 0.6.0), so a new `.bal` under `corpus/bal/subset[1-9]/`, or new
+  cases appended to an existing one, is a Nit: move them to
+  `corpus/bal/subset10/10-<same area>/`, with goldens (`ast`/`cfg`/`desugared`/`bir`)
+  and `corpus/integration` `.txtar`. Editing, renaming or re-marking an existing
+  case is fine. List both with `check_released_subset.py <base>` (for a stack,
+  attribute each file to the PR that added it).
 - Docs and README lines the PR changes: check every factual statement against
   the source, not only the behaviour claims — a type's shape (open vs closed
   record, `readonly &`, `distinct`), a signature, a default, a path. Grep the

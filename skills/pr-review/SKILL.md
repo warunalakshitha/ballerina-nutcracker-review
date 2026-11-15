@@ -291,7 +291,7 @@ Flag, with the two concurrent paths named:
 - Swapping a global for the duration of a call (save / set / restore), e.g. debug flags or writers
 - Test helpers that mutate process-global state (env vars, cwd, globals) in a test that calls `t.Parallel()`
 
-For each suspect, try to reproduce: run the affected tests with `go test -race -count=10` (add `-tags debug` when the code is debug-only), or write a small corpus program that drives both paths many times (several modules, `start`/workers, a loop of a few thousand rounds counting bad outcomes). A reproduced race is **blocking**; an unreproduced but plausible one is a finding with the interleaving spelled out. A race that already exists on main goes under pre-existing issues.
+For each suspect, try to reproduce: run the affected tests with `go test -race -count=10` (add `-tags debug` when the code is debug-only; in a package whose tests walk the corpus, such as `semantics/...` or `corpus`, scope it to the PR's fixtures with `-run '/<path under corpus/bal>$'`, since each fixture is a subtest named by its path, after one full-package `-race` run at the default count), or write a small corpus program that drives both paths many times (several modules, `start`/workers, a loop of a few thousand rounds counting bad outcomes). A reproduced race is **blocking**; an unreproduced but plausible one is a finding with the interleaving spelled out. A race that already exists on main goes under pre-existing issues.
 
 A race is gone only when `-count=10` or more passes at the current head. A shorter clean run, by you or the author, doesn't close it (#1446: `-count=5` passed, `-count=10` failed 6 tests). When the cause is an open runtime issue but the PR's own tests trigger it, the finding stays open with that issue linked: the PR adds tests that make `make test-race` flaky.
 
@@ -336,7 +336,7 @@ It compares each new `.bal` under `corpus/bal`, `corpus/lib` and `corpus/project
 
 **Test locations** (per `manage-corpus-tests`):
 
-- Language tests go in the highest-numbered `corpus/bal/subset<N>/` (currently `subset10`), in `<id>-<feature>/` for features or `<id>-bug/` for bug regressions — including regressions for features from earlier subsets. A new file in a released subset is a nit to move it (editing an existing one is fine).
+- Language tests go in the highest-numbered `corpus/bal/subset<N>/` (currently `subset10`), in `<id>-<feature>/` for features or `<id>-bug/` for bug regressions — including regressions for features from earlier subsets. A new file in a released subset, or new cases appended to an existing one, is a nit to move them (editing or re-marking existing cases is fine; `scripts/check_released_subset.py <base>` lists both).
 - Multi-file / multi-module behaviour goes in `corpus/project/`; parser and compiler recovery from source errors in `corpus/recovery/` (`.txtar` with `ast` and `stderr` goldens, run by `TestRecovery`).
 - Standard-library tests are `corpus/lib/subset<N>/<name>.bal` with their golden in `corpus/integration/lib/subset<N>/<name>.txtar` (currently `subset3`). The library subset is its own release track: don't infer it from the language subset, and a PR opening a new library subset needs the release decision called out.
 - No leading zeros in numeric filename parts (`call2-v.bal`, not `call02-v.bal`).
