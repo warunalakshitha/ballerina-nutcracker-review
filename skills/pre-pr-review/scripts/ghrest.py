@@ -218,6 +218,27 @@ def _unresolved_firsts(n):
     return [comments[i] for i, resolved in review_threads(n) if not resolved and i in comments]
 
 
+def answered_findings(n, summary):
+    """Number of findings the summary still counts that the author has answered since: every unresolved finding
+    thread of ours ends with a human's reply (a decline, a deferral or a question back), and the summary has no
+    PR-level finding (those have no thread to reply in). 0 when any finding is still unanswered."""
+    status = next((line for line in summary.splitlines() if "reviewed `" in line), "")
+    counted = sum(int(k) for k in re.findall(r"\*\*(\d+) [A-Za-z]+\*\*", status))
+    if not counted or re.search(r"^- (🔴|🟡|🔵|❓) \*\*", summary, re.M):
+        return 0
+    comments = api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)
+    last = {}
+    for c in sorted(comments, key=lambda c: c["created_at"]):
+        last[c.get("in_reply_to_id") or c["id"]] = c
+    for c in _unresolved_firsts(n):
+        if c["user"]["login"] != ME or "pre-pr-review:finding" not in c["body"]:
+            continue
+        end = last.get(c["id"], c)
+        if end["user"]["login"] == ME or end["user"].get("type") != "User":
+            return 0
+    return counted
+
+
 def unresolved_finding_threads(n):
     """Number of our finding threads (first comment ours with a finding marker) that aren't resolved."""
     return sum(1 for c in _unresolved_firsts(n) if c["user"]["login"] == ME and "pre-pr-review:finding" in c["body"])

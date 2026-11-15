@@ -9,7 +9,9 @@ A PR can merge when all of these hold:
 - no CI check on the head failed (skipped/neutral count as passed; pending ones show as "after CI pending")
 - our latest "PR review summary" reviewed the current head and reports 0 findings
 - none of our finding threads is unresolved
-A "👤 For a human" item in our summary (a decline the reviewer still doubts) doesn't block merging; the
+Findings the summary still lists count as closed when the author has replied to every one (the Findings
+all answered table lists them for a manual check). A "👤 For a human" item in our summary (a decline the
+reviewer still doubts) doesn't block merging; the
 For a human table lists them for a manual check.
 
 REST only (works in Claude Code cloud sessions). A PR whose data can't be fetched is listed
@@ -19,11 +21,17 @@ import functools
 import re
 
 from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
-    skipped_by_label, summaries, unresolved_finding_threads, changes_requested_by, unresolved_other_threads
+    skipped_by_label, summaries, answered_findings, unresolved_finding_threads, changes_requested_by, unresolved_other_threads
 
 # Stack members share base PRs, so fetch each PR's detail once.
 detail = functools.lru_cache(maxsize=None)(pr_detail)
 summaries = functools.lru_cache(maxsize=None)(summaries)
+answered_findings = functools.lru_cache(maxsize=None)(answered_findings)
+
+
+def latest_summary(n):
+    bodies = summaries(n)
+    return bodies[-1] if bodies else ""
 
 
 def stack_blocker(p, by_head):
@@ -79,10 +87,12 @@ def why_not_ready(p, by_head):
             return "awaiting first review"
         return f"awaiting re-review: pushed since our review of `{shas[-1][:9]}`"
     status = next((line for line in body.splitlines() if "reviewed `" in line), "")
-    if not status.startswith("0 findings"):
+    # Findings the author answered (declined, deferred) count as closed, though the summary still lists them.
+    answered = not status.startswith("0 findings") and answered_findings(n, body)
+    if not status.startswith("0 findings") and not answered:
         counts = re.findall(r"\*\*(\d+ [A-Za-z]+)\*\*", status)
         return "open findings" + (": " + ", ".join(counts) if counts else "")
-    if unresolved_finding_threads(n):
+    if not answered and unresolved_finding_threads(n):
         return "unresolved finding threads"
     by = changes_requested_by(n)
     if by:
@@ -131,7 +141,7 @@ def auto_merge(p):
 
 
 def main():
-    mergeable, blocked, parked, humans = [], [], [], []
+    mergeable, blocked, parked, humans, replied = [], [], [], [], []
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
@@ -150,6 +160,7 @@ def main():
             waits = bool(why) and why.startswith("CI pending")
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
             checks = human_checks(p)
+            answered = answered_findings(p["number"], latest_summary(p["number"]))
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
@@ -161,13 +172,18 @@ def main():
             # The queue runs its own checks, so pending CI on the head doesn't matter here.
             mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})", decision))
         else:
-            mergeable.append((p, f"after {why}" if waits else "ready", decision))
+            state = f"after {why}" if waits else "ready"
+            if answered:
+                state += f" ({answered} answered by the author, check by hand)"
+            mergeable.append((p, state, decision))
         if checks:
             humans.append((p, checks))
+        if answered:
+            replied.append((p, answered, why))
     # Queued PRs first, in queue order; the rest keep PR order.
     mergeable.sort(key=lambda m: queue[m[0]["number"]][0] if m[0]["number"] in queue else len(queue) + 1)
 
-    ready = sum(1 for _, s, _ in mergeable if s == "ready")
+    ready = sum(1 for _, s, _ in mergeable if s.startswith("ready"))
     in_queue = sum(1 for _, s, _ in mergeable if s.startswith("in merge queue"))
     print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({in_queue if queue_read is not None else '?'} in merge queue, {ready} ready,"
           f" {len(mergeable) - ready - in_queue} after CI)"
@@ -185,6 +201,16 @@ def main():
               f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {state} |")
     if not mergeable:
         print("| — | none | | | | |")
+
+    if replied:
+        print(f"\n## Findings all answered ({len(replied)})\n")
+        print("Every finding our summary still lists has a reply from the author (a decline, a deferral or a question)"
+              ", so they count as closed. Read the replies and decide; the last column is"
+              " whatever else keeps the PR from merging.\n")
+        print("| PR | Title | Author | Answered | Otherwise |")
+        print("|---|---|---|---|---|")
+        for p, k, why in replied:
+            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {k} | {why or 'can merge'} |")
 
     if humans:
         print(f"\n## For a human ({len(humans)})\n")
