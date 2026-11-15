@@ -8,7 +8,7 @@ PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/baller
 ## How rounds run
 
 - **Routine:** a claude.ai routine runs every two hours (:30 UTC). It resets its checkout of this repo to `main`, then follows `references/cloud-round.md`, and stops within a minute when no PR changed since the last round.
-- **Review board:** the [Ballerina Nutcracker Pull Request Review Board](https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1) artifact holds the latest report (open-PR tables, what each round reviewed), earlier reports, and the round's lock and last scan. Rounds write it with `ArtifactData`; nothing is committed to this repo.
+- **Review board:** the [Ballerina Nutcracker Pull Request Review Board](https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1) artifact holds the latest report (open-PR tables, what each round reviewed; earlier reports aren't kept), the retrospective items, and the round's lock and last scan. Rounds write it with `ArtifactData`; nothing is committed to this repo.
 - **Environment** (`ballerina-nutcracker-review` at claude.ai/code): network access Limited plus `dist.ballerina.io`, and this setup script (cached between runs):
 
   ```bash

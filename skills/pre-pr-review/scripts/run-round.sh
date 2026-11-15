@@ -45,7 +45,7 @@ cleanup() {
   git -C "$REPO" for-each-ref --format='delete %(refname)' refs/review/ refs/pr-stack/ | git -C "$REPO" update-ref --stdin
   [[ -d "$SP" ]] || return 0
   find "$SP" -mindepth 1 -maxdepth 1 ! -name reports -exec rm -rf {} +
-  # Keep only the 10 newest saved reports (the Ballerina Nutcracker Pull Request Review Board artifact has the latest and its history).
+  # Keep only the 10 newest saved reports (the Ballerina Nutcracker Pull Request Review Board artifact has only the latest).
   if [[ -d "$SP/reports" ]]; then
     find "$SP/reports" -maxdepth 1 -type f -name '*.md' | sort -r | tail -n +11 | while read -r f; do rm -f "$f"; done
   fi
