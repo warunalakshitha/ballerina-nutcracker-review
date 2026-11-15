@@ -242,6 +242,50 @@ def overlap_warnings(new_findings, others, threads):
 _GRAPHQL = None
 
 
+SHA_RE = re.compile(r"(?<![0-9A-Za-z/#])(?=[0-9a-f]*[a-f])(?=[0-9a-f]*\d)[0-9a-f]{7,40}(?![0-9A-Za-z])")
+BARE_LINE = re.compile(r"^\s*[\])};,]*\s*$")
+
+
+def sha_warnings(data, base, num, branches):
+    """Commit SHAs named in finding, summary or fixed_later text that aren't on the PR, its stack or one of
+    `branches` (the PR's base and the default branch), e.g. left over from before a force-push."""
+    texts = [(f["id"], f"{f.get('title', '')} {f.get('body', '')}") for f in data["findings"]]
+    s = data.get("summary", {})
+    texts += [("summary", " ".join([s.get("line", ""), *s.get("items", [])]))]
+    texts += [("fixed_later", f.get("text", "")) for f in (data.get("stack") or {}).get("fixed_later", [])]
+    named = {(where, sha) for where, text in texts for sha in SHA_RE.findall(text)}
+    if not named:
+        return []
+    prs = {num, *(int(n) for n in (data.get("stack") or {}).get("heads", {}))}
+    known = [c["sha"] for n in prs for c in paged(f"{base}/pulls/{n}/commits")]
+    warn = []
+    for where, sha in sorted(named):
+        if any(k.startswith(sha) for k in known):
+            continue
+        if any(subprocess.run(["gh", "api", f"{base}/compare/{b}...{sha}", "--jq", ".status"], capture_output=True,
+                              text=True, timeout=60).stdout.strip() in ("behind", "identical") for b in branches):
+            continue
+        warn.append(f"{where}: commit {sha} is not on this PR, its stack or {' / '.join(branches)}; refresh the SHA")
+    return warn
+
+
+def anchor_warnings(placed, pr_files):
+    """Findings anchored on a blank line or one holding only closing brackets: the cited line is off."""
+    text = {}
+    for f in pr_files:
+        line = 0
+        for row in (f.get("patch") or "").splitlines():
+            m = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", row)
+            if m:
+                line = int(m.group(1))
+            elif not row.startswith(("-", "\\")):
+                text[(f["filename"], line)] = row[1:]
+                line += 1
+    return [f"{f['id']}: anchored on {f['path']}:{f['line']}, which is `{text[(f['path'], f['line'])].strip()}`; "
+            "point it at the line the finding is about"
+            for f, where in placed if where == "line" and BARE_LINE.match(text.get((f["path"], f["line"]), "x"))]
+
+
 def graphql_available():
     """Claude Code cloud sessions block GraphQL; they expose review threads through REST `ccr` routes instead."""
     global _GRAPHQL
@@ -313,7 +357,8 @@ def main():
             sys.exit(f"stack PR #{n} moved to {now[:9]} since the review at {sha[:9]}: re-review the stack")
     fixed_by = {f["id"]: f["pr"] for f in stack.get("fixed_later", []) if f.get("id")}
 
-    lines = commentable_lines(paged(f"{base}/pulls/{num}/files"))
+    pr_files = paged(f"{base}/pulls/{num}/files")
+    lines = commentable_lines(pr_files)
     placed = [(f, place(f, lines)) for f in data["findings"]]
     bodies = {f["id"]: render_finding(f, where) for f, where in placed}
 
@@ -360,7 +405,8 @@ def main():
         c["body"].startswith("<!-- pre-pr-review:summary") or c["body"].startswith(LEGACY_SUMMARY_PREFIX + str(num)))]
     old_summary = max(summaries, key=lambda c: c["updated_at"], default=None)
 
-    warnings = brevity_warnings(data) + overlap_warnings(plan["new_line"] + plan["new_file"], others, threads)
+    warnings = (brevity_warnings(data) + overlap_warnings(plan["new_line"] + plan["new_file"], others, threads)
+                + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files))
     write_preview(out, data, placed, bodies, plan, summary, old_summary, warnings, head, fixed_by)
     print(f"Preview: {out}")
     for w in warnings:

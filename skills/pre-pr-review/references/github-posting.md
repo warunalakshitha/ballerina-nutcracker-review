@@ -59,7 +59,10 @@ five seconds and act on without scrolling.
   5, ≤ 140 chars each. `summary.line` ≤ 160 chars. The script then adds `CodeRabbit: <n> of <m> threads
   unresolved.` whenever CodeRabbit opened review threads on the PR.
 
-The dry run prints a warning for each rule a finding breaks. Fix them before
+The dry run prints a warning for each rule a finding breaks, for a commit SHA
+in finding, summary or `fixed_later` text that isn't on the PR, its stack or
+`main` (stale after a force-push), and for a finding anchored on a blank or
+closing-bracket line. Fix them before
 `--post`.
 
 ## `findings.json`
