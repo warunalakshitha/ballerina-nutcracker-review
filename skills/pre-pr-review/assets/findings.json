@@ -6,6 +6,7 @@
   "skill_version": "<sha256 of the review skill: pr-review/SKILL.md for open-PR rounds, see agent-instructions.md>",
   "skill_commit": "<git -C $TOOLS rev-parse --short=9 HEAD>",
   "answered": [],
+  "human": [],
   "stack": {
     "prs": [
       1024,

@@ -9,6 +9,8 @@ A PR can merge when all of these hold:
 - no CI check on the head failed (skipped/neutral count as passed; pending ones show as "after CI pending")
 - our latest "PR review summary" reviewed the current head and reports 0 findings
 - none of our finding threads is unresolved
+A "👤 For a human" item in our summary (a decline the reviewer still doubts) doesn't block merging; the
+For a human table lists them for a manual check.
 
 REST only (works in Claude Code cloud sessions). A PR whose data can't be fetched is listed
 under "Could not check".
@@ -21,6 +23,7 @@ from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergea
 
 # Stack members share base PRs, so fetch each PR's detail once.
 detail = functools.lru_cache(maxsize=None)(pr_detail)
+summaries = functools.lru_cache(maxsize=None)(summaries)
 
 
 def stack_blocker(p, by_head):
@@ -45,6 +48,16 @@ def stack_blocker(p, by_head):
             return f"stacked on conflicting #{q['number']}"
         cur = q
     return None
+
+
+def human_checks(p):
+    """'👤 For a human' items in our summary at the PR's current head (declines we still doubt)."""
+    bodies = summaries(p["number"])
+    body = bodies[-1] if bodies else ""
+    shas = re.findall(r"reviewed `([0-9a-f]{7,40})", body)
+    if not shas or not p["head"]["sha"].startswith(shas[-1]):
+        return []
+    return [line.split("·", 1)[1].strip() for line in body.splitlines() if line.startswith("- 👤 **For a human** ·")]
 
 
 def why_not_ready(p, by_head):
@@ -118,7 +131,7 @@ def auto_merge(p):
 
 
 def main():
-    mergeable, blocked, parked = [], [], []
+    mergeable, blocked, parked, humans = [], [], [], []
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
@@ -136,6 +149,7 @@ def main():
             # 0 findings, mergeable, reviewed at head: with only CI left it counts as mergeable once CI passes.
             waits = bool(why) and why.startswith("CI pending")
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
+            checks = human_checks(p)
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
@@ -148,6 +162,8 @@ def main():
             mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})", decision))
         else:
             mergeable.append((p, f"after {why}" if waits else "ready", decision))
+        if checks:
+            humans.append((p, checks))
     # Queued PRs first, in queue order; the rest keep PR order.
     mergeable.sort(key=lambda m: queue[m[0]["number"]][0] if m[0]["number"] in queue else len(queue) + 1)
 
@@ -169,6 +185,16 @@ def main():
               f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {state} |")
     if not mergeable:
         print("| — | none | | | | |")
+
+    if humans:
+        print(f"\n## For a human ({len(humans)})\n")
+        print("The author declined or answered these and the reviewer still doubts the answer. They don't block merging; check them by hand.\n")
+        print("| PR | Title | Author | Check |")
+        print("|---|---|---|---|")
+        for p, items in humans:
+            for h in items:
+                cell = h.replace("|", "\\|")
+                print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {cell} |")
 
     if blocked:
         counts = {}

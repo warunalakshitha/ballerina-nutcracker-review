@@ -87,6 +87,7 @@ Never inside the repo checkout: keep it in a temp/scratch directory. Shape: see
 | `summary.items` | PR-level notes with no line to attach to. Never echo other reviewers' threads here; the script adds `CodeRabbit: <n> of <m> threads unresolved.` from the live thread state |
 | `summary.checked` | optional short list rendered as `Checked: a ✔ · b ✔` |
 | `answered` | ids of earlier findings dropped because the author answered them (declined with a reason, deferred to an issue or later PR, or resolved without a change); counted as "answered" instead of "fixed" in the status line. Keep ids from earlier rounds in the list |
+| `human` | one line per answered finding whose answer you still doubt (the author's reason contradicts the spec, the code or a repro): what they said and why you doubt it, with the evidence. Renders `👤 N for a human` in the status line and a `👤 **For a human**` item; it isn't a finding, doesn't block merging, and `ready_table.py` lists it under For a human. Keep a line until it no longer holds (the code changed or a human replied) |
 | `stack` | stacked PRs only: paste `scripts/stack.py <N> --json`. Renders `Stack: #a → **#b** → #c · reviewed as a unit at <tip>`; each `fixed_later` entry (`pr`, `text`, optional old finding `id`) becomes a `✅ Fixed later in the stack by #m` item, and that old comment is resolved with the same reason. Omit for a standalone PR |
 
 ## Reruns

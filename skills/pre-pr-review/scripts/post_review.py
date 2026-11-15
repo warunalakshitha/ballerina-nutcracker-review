@@ -180,6 +180,9 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     tally = [f"{n} {word}" for n, word in ((fixed, "fixed"), (answered, "answered"), (withdrawn, "withdrawn")) if n]
     if tally:
         count_text += f" ({', '.join(tally)})"
+    human = [h.strip() for h in data.get("human", []) if h.strip()]
+    if human:
+        count_text += f" · 👤 {len(human)} for a human"
     status = f"{count_text} · reviewed `{data['head_sha'][:9]}`."
     if line := data["summary"].get("line", "").strip():
         status += f" {line}"
@@ -199,6 +202,7 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
         done = " ✅" if not rabbit_unresolved else ""
         lines.append(f"CodeRabbit: {rabbit_unresolved} of {rabbit_total} threads unresolved{done}.")
     items = list(data["summary"].get("items", []))
+    items += [f"👤 **For a human** · {h}" for h in human]
     items += [f"✅ Fixed later in the stack by #{f['pr']}: {f['text']}" for f in (stack or {}).get("fixed_later", [])]
     for f, where in placed:
         if where == "pr":
