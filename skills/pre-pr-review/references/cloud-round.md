@@ -1,6 +1,6 @@
 # Cloud review round
 
-Review rounds run in a Claude Code cloud session (claude.ai/code): an hourly routine (it starts a few minutes after each hour and stops within a minute when nothing changed) or a run started by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Follow `routine.md` exactly, with the changes below.
+Review rounds run in a Claude Code cloud session (claude.ai/code): a routine every two hours (it starts at about :30 UTC and stops within a minute when nothing changed) or a run started by hand, with the Mac runner (`scripts/run-round.sh`) only as a fallback. Skill fixes are made locally and pushed to `main` of this repo; every round starts from that `main`. Follow `routine.md` exactly, with the changes below.
 
 **A round never commits to this repo.** Its lock, last scan and report live in the **Ballerina Nutcracker Pull Request Review Board** artifact, `BOARD=https://claude.ai/artifact/PDgHUQcCGn5gx84bQ2Ssh1`, read and written with the `ArtifactData` tool (load it with ToolSearch). GitHub writes go to the post-outbox Action as `repository_dispatch` events. `S` below is `python3 $TOOLS/skills/pre-pr-review/scripts/round_state.py`.
 
