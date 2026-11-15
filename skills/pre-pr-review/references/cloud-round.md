@@ -23,7 +23,7 @@ From here on, every way the round ends early (a failed gate, a usage limit, an e
 
 ## 3. Setup
 - `SP=/tmp/review-sp`: create it and empty it except `reports/`, and in `reports/` keep only the 10 newest files (the environment keeps them between runs).
-- `REPO` = a full clone of https://github.com/ballerina-nutcracker/ballerina at `~/ballerina-lang-go`, `UPSTREAM=origin`.
+- `REPO` = a full clone of https://github.com/ballerina-nutcracker/ballerina at `~/ballerina-lang-go`, `UPSTREAM=origin`. The environment may hand over a shallow clone: if `git -C $REPO rev-parse --is-shallow-repository` prints `true`, run `git -C $REPO fetch --unshallow origin` before anything reads history.
 - `JBALLERINA_SRC` = a clone of https://github.com/ballerina-platform/ballerina-lang at `~/ballerina-lang`, checked out at tag `v2201.14.1` to match `bal` (shallow is fine).
 - Tools, pinned: Go 1.27.1 (the `go.mod` toolchain line), Ballerina 2201.14.1 (`bal version`), golangci-lint 2.15.0 and actionlint built with that Go, wrk, hyperfine, python3, shellcheck. The environment's setup script installs all of them and is cached, so normally just check the versions. Only if one is missing or wrong, install it the way the setup script does (it's quoted in the README), and say so under tooling gaps in the report so the setup script gets fixed:
   - Go: go.dev and dl.google.com are blocked, but the module proxy serves toolchains (`go env -w GOTOOLCHAIN=go1.27.1`).
