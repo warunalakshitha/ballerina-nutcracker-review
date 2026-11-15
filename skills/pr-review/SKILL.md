@@ -233,14 +233,15 @@ LLM-written code fails in predictable ways that a local read of the diff misses.
 - **Data smuggled past accessors.** New AST fields or side tables used to pass data to a later stage instead of going through the stage's parameters, context or proper accessor.
 - **Global performance claims.** Local perf reasoning is fine; claims about whole-program cost must be measured (`compiler-tools` benchmark, a scaled probe), never guessed.
 
-Don't spend findings on what the linters already enforce: `make lint` (including walkpurity), and each module's `<module>/.golangci.yml` plus the `.golangci/*.yml` it links (for example `semantics/.golangci.yml` forbids `ast.Walk`, `Set*` on model/semtypes values and diagnostics queries in `internal/analysis`; depguard keeps `test_util` out of production code). Read that config before raising anything a linter could cover; tiers change, so don't rely on a list here. `unused` is disabled in every config, so nothing but `check_unused_symbols.py` (step 6) reports dead code. When a finding could be caught by a deterministic check next time, list it as a lint candidate in the final message.
+Don't spend findings on what the linters already enforce: `make lint` (including walkpurity), and each module's `<module>/.golangci.yml` plus the `.golangci/*.yml` it links (for example `semantics/.golangci.yml` forbids `ast.Walk`, `Set*` on model/semtypes values and diagnostics queries in `internal/analysis`; depguard keeps `test_util` out of production code). Read that config before raising anything a linter could cover; tiers change, so don't rely on a list here. `unused` is disabled in every config, so nothing but `check_unused_symbols.py` (step 6) reports dead code. Once #1238 is on main, `make lint` includes `lint-generated-names`: don't raise `$`-prefixed generated function names that aren't constants. When a finding could be caught by a deterministic check next time, list it as a lint candidate in the final message.
 
 **Lint config PRs.** When a PR changes a module's tier, `.golangci*.yml` or `.golangci/*.yml`, or adds a linter directive such as `//sumtype:decl`:
 
 - Run `scripts/check_golangci.py <base>`: duplicate linter entries, linters added to a tier but not to the hand-made module configs that copy it (regular files, not tier symlinks, e.g. `semantics/.golangci.yml`), and directives whose linter the module's config doesn't enable.
 
 - Once #1612 is on main, run `make lint-configs` and `python3 .github/scripts/test_check_lint_configs.py`. A module moved to a looser tier is a finding unless the PR explains it.
-- Lint each module that moves to a stricter tier with the PR merged into current main (`make lint-module/<name>`): main's new code may trip the new linters even though the PR head is clean (#1612).
+- Once #1613 is on main, also run `make lint-func-usage`.
+- Lint each module that moves to a stricter tier with the PR merged into current main (`make lint-module/<name>`), and run any workspace-wide gate the PR adds (such as `make lint-func-usage`) the same way: main's new code may trip the new linters even though the PR head is clean (#1612).
 
 #### Consistency with surrounding code
 
@@ -318,6 +319,8 @@ python3 "$TOOLS/skills/pr-review/scripts/check_unused_symbols.py" <base>
 ```
 
 It lists the funcs, methods, types, consts, vars and struct fields the PR adds that nothing references (`UNUSED`) or that only `_test.go` files reference (`TEST-ONLY`). No linter reports either (`unused` is disabled in every config). Read each hit before posting, because matching is by name: a common name can be hidden by an unrelated use (a field `DocumentURI` matches the type `workspace.DocumentURI`), and a symbol the PR description reserves for a follow-up is not dead. A `TEST-ONLY` symbol is a Nit to delete it, or to move it into the test file when only tests need it. A `GENERATED` line is one Nit on the generator's filter, not one per symbol.
+
+Once #1613 is on main, `make lint-func-usage` fails package-level functions without a production use in the modules it covers (Strict, Data, Frontend and Semantics tiers at #1613; check the target). There, don't raise `UNUSED`/`TEST-ONLY` hits or "exported but only used in its own package" for package-level functions; keep them for methods, types, consts, vars, fields and modules the gate doesn't cover. A `//funcusage:test-hook <reason>` directive on a function no test calls is a dead helper kept by a misleading exemption (Nit), unless the author gives a reason such as a planned use (ANSWERED).
 
 **License headers.** On every PR that adds `.go` or `.bal` files (fixtures included), run inside the PR worktree:
 
