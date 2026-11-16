@@ -439,6 +439,8 @@ Run when the PR changes language semantics, runtime behavior, stdlib, or error/p
 
 5. If implementation intent is unclear, read the matching jBallerina source under `$JBALLERINA_SRC` and note divergence
 
+**The PR's own fixtures, always.** Whenever the PR adds or changes a `corpus/bal` or `corpus/lib` fixture, run each added or changed `*-v.bal` / `*-p.bal` with `bal run` and compare with its `@output` / `@panic` markers, and run each `*-e.bal` and confirm jBallerina also rejects it at the marked lines (messages may differ). This runs even when the rest of this step is skipped. A `-v`/`-p` fixture jBallerina rejects or prints differently is Important unless the spec (4a) or `INTENT.md` justifies it (#1255: `<any> wait f` on `future<int>` passed on Nutcracker but jBallerina rejects it, since `int|error` can't be cast to `any`). `*-f{v,e,p}.bal` fixtures are exempt.
+
 Skip heavy jBallerina runs for pure docs/CI/chore with no behavior change; state that you skipped and why.
 
 For PRs under `ls/` (or `cli/cmd/langserver.go`), follow [ls-review.md](ls-review.md) instead of the `bal run` comparison above: LSP 3.18 conformance, `ls/AGENTS.md` layering, UTF-16 positions, generation/event-bus concurrency, fixture tests under `ls/corpus`, and parity with the jBallerina language server.
