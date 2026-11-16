@@ -181,11 +181,17 @@ def main():
 
     ready = sum(1 for _, s, _ in mergeable if s.startswith("ready"))
     in_queue = sum(1 for _, s, _ in mergeable if s.startswith("in merge queue"))
-    print(f"**Open PRs: {len(prs)}** · can merge: {len(mergeable)} ({in_queue if queue_read is not None else '?'} in merge queue, {ready} ready,"
-          f" {len(mergeable) - ready - in_queue} after CI)"
-          f" · cannot merge: {len(blocked)}"
-          f" · drafts: {sum(1 for _, w in parked if w == 'draft')}"
-          f" · held by label (don't-merge/dnm/hold/wip): {sum(1 for _, w in parked if w != 'draft')}\n")
+    print("## Summary\n")
+    print("| Open PRs | Count |")
+    print("|---|---|")
+    print(f"| **All open** | **{len(prs)}** |")
+    print(f"| Can merge | {len(mergeable)} |")
+    print(f"| ↳ in merge queue | {in_queue if queue_read is not None else '?'} |")
+    print(f"| ↳ ready | {ready} |")
+    print(f"| ↳ after CI | {len(mergeable) - ready - in_queue} |")
+    print(f"| Cannot merge | {len(blocked)} |")
+    print(f"| Drafts | {sum(1 for _, w in parked if w == 'draft')} |")
+    print(f"| Held by label (don't-merge/dnm/hold/wip) | {sum(1 for _, w in parked if w != 'draft')} |\n")
     print(f"## Can merge ({len(mergeable)})\n")
     if queue_read is None:
         print("Couldn't read the merge queue; a queued PR shows as `ready` here.\n")

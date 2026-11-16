@@ -15,7 +15,7 @@ repository_dispatch events.
   round_state.py wait-posted <findings.json> [minutes]
                                   wait (default 15 min) until the PR's summary shows the reviewed head
   round_state.py refresh-tables <report.md> <tables.md> <when>
-                                  print the report with its open-PR tables (from the **Open PRs** line through the
+                                  print the report with its open-PR tables (from the Summary table through the
                                   Drafts and held table) replaced by a fresh ready_table.py output, under a
                                   "Tables refreshed <when>" line; exit 0 if the tables changed, 1 if they didn't,
                                   2 if the report or the tables file has no tables block
@@ -105,7 +105,8 @@ def wait_posted(findings, minutes="15"):
         time.sleep(30)
 
 
-TABLE_HEADINGS = ("## Can merge", "## For a human", "## Cannot merge", "## Drafts and held", "## Findings all answered")
+TABLES_START = ("## Summary", "**Open PRs:")  # the second is the totals line older reports have
+TABLE_HEADINGS = ("## Summary", "## Can merge", "## For a human", "## Cannot merge", "## Drafts and held", "## Findings all answered")
 REFRESHED = "_Tables refreshed "
 
 
@@ -113,9 +114,9 @@ def refresh_tables(report_file, tables_file, when):
     """Swap the report's open-PR tables for fresh ones, so merge-queue, approval and CI changes show between
     rounds even when no PR head moved."""
     lines = open(report_file).read().split("\n")
-    start = next((i for i, l in enumerate(lines) if l.startswith("**Open PRs:")), None)
+    start = next((i for i, l in enumerate(lines) if l.startswith(TABLES_START)), None)
     if start is None:
-        print("no **Open PRs** line in the report", file=sys.stderr)
+        print("no open-PR tables in the report", file=sys.stderr)
         return 2
     while start > 0 and (lines[start - 1].startswith(REFRESHED) or not lines[start - 1].strip()):
         start -= 1
@@ -123,8 +124,8 @@ def refresh_tables(report_file, tables_file, when):
                 if lines[i].startswith("## ") and not lines[i].startswith(TABLE_HEADINGS)), len(lines))
     old = "\n".join(l for l in lines[start:end] if not l.startswith(REFRESHED)).strip()
     new = open(tables_file).read().strip()
-    if not new.startswith("**Open PRs:"):
-        print("the tables file doesn't start with an **Open PRs** line (did ready_table.py fail?)", file=sys.stderr)
+    if not new.startswith("## Summary"):
+        print("the tables file doesn't start with the Summary table (did ready_table.py fail?)", file=sys.stderr)
         return 2
     if old == new:
         return 1
