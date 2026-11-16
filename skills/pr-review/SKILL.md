@@ -112,7 +112,7 @@ For language server PRs (`ls/`), item 2 is an example LSP exchange instead of `.
 For every non-merge commit on the PR:
 
 1. **Conventional Commits** — CI (`lint-pr.yml`) runs `.github/scripts/validate_commits.py` on the PR title and every non-merge commit, and `fixup!`/`squash!` subjects fail it too. Don't re-run it or raise what it reports.
-2. **Atomic commits, no unsquashed corrections** — each commit is one coherent change with its tests and docs; flag commits that mix unrelated changes. Each commit builds on its own (AGENTS.md; every merge method can land commits as-is): for a PR with more than one commit, run `git rebase -x 'go build ./...' <merge-base>` in your worktree; a commit that doesn't build is a PR-level finding naming the SHA
+2. **Atomic commits, no unsquashed corrections** — each commit is one coherent change with its tests and docs; flag commits that mix unrelated changes. Each commit builds on its own (AGENTS.md; every merge method can land commits as-is): for a PR with more than one commit, run `git rebase -x 'go build $(go list -m -f "{{.Dir}}/...")' <merge-base>` in your worktree (a plain `go build ./...` at the root builds only the root module and skips `cli` and the other workspace modules); a commit that doesn't build is a PR-level finding naming the SHA
    - A correction does not need a `fixup!` subject to be one. For each ordinary commit, check whether it corrects an earlier commit **on the same PR** by the same author: it touches the same files or symbols and its subject fixes, narrows, reverts or rewords what that commit added (e.g. `fix(x): reset the alias budget for each document` after `fix(x): bound nesting and aliases`; `docs(x): drop the trailing space…` after a `docs(x)` commit). Flag each as an unsquashed correction naming the target SHA (AGENTS.md: `git commit --fixup=<target>`, autosquash before merge). Commits made in reply to review findings, including ours, count. On a re-review, check the commits added since the last round.
 3. **No Co-authored-by** (this review's team policy, not a repo rule) — fail any commit whose message contains `Co-authored-by:` (any co-author, including bots)
 4. **No AI agent author** (team policy, as above) — flag if author/committer name or email matches AI tooling, e.g.:
@@ -161,7 +161,7 @@ Verify each design finding in a clean-context subagent that gets the claim, the 
 Review for:
 
 - Correctness vs intended Ballerina semantics (compare to jBallerina source under `$JBALLERINA_SRC` when behavior is unclear)
-- Fit with interpreter stages in `AGENTS.md` (parse → AST → symbols → types → semantic → CFG → desugar → BIR → interpret)
+- Fit with interpreter stages in `AGENTS.md` (parse → AST → symbols → types → semantic → CFG → compiler plugins → desugar → BIR → interpret)
 - PAL: platform interactions (io, http, fs) in compiler/interpreter execution go through PAL. PAL implementations and developer tooling may use platform APIs directly; don't flag those
 - Symbols: never map-key `model.Symbol`; use `model.SymbolRef`; go through compiler context
 - Dispatch on one discriminator (`AGENTS.md` review criteria): concrete type or semantic kind/tag. Flag a type switch whose fallback dispatches on kind/tag, and the converse. A type assertion inside an explicit tag case to reach that case's data is fine
@@ -176,7 +176,7 @@ Review for:
 - New `.go` / `.bal` files carry the exact WSO2 Apache header with the year they were added (`.githooks/commit-msg`; CI doesn't check it)
 - Singleton checks and value extraction use `semtypes.SingleShape`; a hand-rolled equivalent is a Nit (AGENTS.md)
 - New scripts are Python or shell (`.ps1`/`.bat`/`.cmd` for Windows-only), never JavaScript (AGENTS.md)
-- Stage boundaries: a PR that adds or reorders a pass in stages 5–9 keeps the "stop on errors" check after it in `projects/module_context.go` (`analyzeAndDesugar`) and mirrors the order in `test_util/testphases/phases.go`; `ast/`, `st/` and `parser/` never import `semantics`, `desugar`, `birgen` or `runtime` (`go list -deps ./ast ./st ./parser`); `SyntaxError` is reported only from `parser`/`nodebuilder` (`git grep 'SyntaxError(' -- desugar birgen projects runtime`)
+- Stage boundaries: a PR that adds or reorders a pass in stages 5–10 keeps the "stop on errors" check after it (`analyzeAndCreateCFG` in `projects/module_context.go`, and the `modulesHaveErrors` barriers in `projects/package_compilation.go`) and mirrors the order in `test_util/testphases/phases.go`; `ast/`, `st/` and `parser/` never import `semantics`, `desugar`, `birgen` or `runtime` (`go list -deps ./ast ./st ./parser`); `SyntaxError` is reported only from `parser`/`nodebuilder` (`git grep 'SyntaxError(' -- desugar birgen projects runtime`)
 - Corpus tests preferred for behaviour reachable from Ballerina source (`AGENTS.md`); no tests or guards for states the compiler/runtime guarantees are impossible
 - **Challenge every new Go unit test, even one with a "why not corpus" comment.** Don't take the comment's word for it. Sort each test case into one of these:
   1. Already covered by an existing corpus test: name the test and say the case is redundant.
@@ -286,7 +286,7 @@ Record failures as blocking issues with command + excerpt.
 
 #### Data races
 
-`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel within a module, stages 5–9 running concurrently across modules (stages 1–4 and 10 are sequential; `AGENTS.md`), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
+`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel within a module, stages 5–8 and 10 running concurrently across modules (stages 1–4 run in dependency order, and 9 and 11 start after package-wide barriers; `AGENTS.md`; once #985 is on main, stages 1–2 also run concurrently across modules and stage 10 is pipelined with stage 11 per module), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
 
 Flag, with the two concurrent paths named:
 
