@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""List corpus fixtures a PR adds or renames without the golden files the corpus tests need.
+"""List corpus fixtures a PR adds or renames without the golden files the corpus tests need, and BIR golden
+lines the PR adds that print an `unknown` operator.
 
 Usage: $TOOLS/skills/pr-review/scripts/check_corpus_goldens.py [base-ref]
   base-ref defaults to origin/main (merge-base with HEAD is used). Run it inside the PR worktree.
@@ -16,8 +17,12 @@ head, which CI only shows hours later.
 
   MISSING   <fixture>: <golden>, ...   one line per fixture with every golden it lacks
 
-Each MISSING fixture is an Important finding (the PR's own tests fail); report them together. Exit status 1 when
-anything is reported.
+  UNKNOWN-OP <golden>: <count> line(s), e.g. <line>   added BIR golden lines with `= unknown`: the BIR printer has
+            no name for that instruction's operator, so a test that reads the golden can't tell which operator was
+            emitted. Main already has such lines; only lines the PR adds are listed.
+
+Each MISSING fixture is an Important finding (the PR's own tests fail); report them together. UNKNOWN-OP is one
+Nit asking for the printer to name the operator (bir/pretty_print.go). Exit status 1 when anything is reported.
 """
 import os
 import re
@@ -62,6 +67,15 @@ def main():
         if missing:
             found += 1
             print(f"MISSING   {path}: {', '.join(missing)}")
+    unknown, current = {}, None
+    for line in git("diff", "-U0", f"{base}...HEAD", "--", "corpus/bir").splitlines():
+        if line.startswith("+++ "):
+            current = line[6:]
+        elif line.startswith("+") and re.search(r"=\s*unknown\b", line):
+            unknown.setdefault(current, []).append(line[1:].strip())
+    for path, lines in sorted(unknown.items()):
+        found += 1
+        print(f"UNKNOWN-OP {path}: {len(lines)} line(s), e.g. {lines[0]}")
     return 1 if found else 0
 
 
