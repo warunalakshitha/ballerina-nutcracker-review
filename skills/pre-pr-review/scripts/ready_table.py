@@ -12,7 +12,7 @@ A PR can merge when all of these hold:
 Findings the summary still lists count as closed when the author has replied to every one; the PR's row in
 Can merge or Cannot merge says how many, for a manual check. A "👤 For a human" item in our summary (a decline the
 reviewer still doubts) doesn't block merging; the
-For a human table lists them for a manual check.
+For a human table lists them for a manual check, but only for PRs with no open findings left.
 
 REST only (works in Claude Code cloud sessions). A PR whose data can't be fetched is listed
 under "Could not check".
@@ -174,7 +174,8 @@ def main():
             mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})" + note, decision))
         else:
             mergeable.append((p, (f"after {why}" if waits else "ready") + note, decision))
-        if checks:
+        # Only once every finding is closed: while one is open, the author has work to do first.
+        if checks and not (why and why.startswith("open findings")):
             humans.append((p, checks))
     # Queued PRs first, in queue order; the rest keep PR order.
     mergeable.sort(key=lambda m: queue[m[0]["number"]][0] if m[0]["number"] in queue else len(queue) + 1)
