@@ -106,7 +106,8 @@ def wait_posted(findings, minutes="15"):
 
 
 TABLES_START = ("## Summary", "**Open PRs:")  # the second is the totals line older reports have
-TABLE_HEADINGS = ("## Summary", "## Can merge", "## For a human", "## Cannot merge", "## Drafts and held", "## Findings all answered")
+TABLE_HEADINGS = ("## Summary", "## Can merge", "## Removed from merge queue", "## For a human", "## Cannot merge",
+                  "## Drafts and held", "## Findings all answered")
 REFRESHED = "_Tables refreshed "
 
 

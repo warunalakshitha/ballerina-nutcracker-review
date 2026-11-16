@@ -29,6 +29,17 @@ summaries = functools.lru_cache(maxsize=None)(summaries)
 answered_findings = functools.lru_cache(maxsize=None)(answered_findings)
 
 
+def queue_removal(n):
+    """(time, actor) of the PR's last removal from the merge queue when it hasn't been re-added since, else None."""
+    last = None
+    for e in api(f"repos/{REPO}/issues/{n}/timeline", paginate=True) or []:
+        if e.get("event") == "added_to_merge_queue":
+            last = None
+        elif e.get("event") == "removed_from_merge_queue":
+            last = (e["created_at"][:16].replace("T", " "), (e.get("actor") or {}).get("login", "?"))
+    return last
+
+
 def latest_summary(n):
     bodies = summaries(n)
     return bodies[-1] if bodies else ""
@@ -141,7 +152,7 @@ def auto_merge(p):
 
 
 def main():
-    mergeable, blocked, parked, humans = [], [], [], []
+    mergeable, blocked, parked, humans, removed = [], [], [], [], []
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
@@ -161,10 +172,13 @@ def main():
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
             checks = human_checks(p)
             answered = answered_findings(p["number"], latest_summary(p["number"]))
+            q = queue.get(p["number"])
+            removal = None if q else queue_removal(p["number"])
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        q = queue.get(p["number"])
+        if removal:
+            removed.append((p, removal, why))
         note = f" ({answered} answered by the author, check by hand)" if answered else ""
         if why and not waits:
             # Queued with our findings still open: it lands anyway, so flag it.
@@ -204,6 +218,15 @@ def main():
               f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {state} |")
     if not mergeable:
         print("| — | none | | | | |")
+
+    if removed:
+        print(f"\n## Removed from merge queue ({len(removed)})\n")
+        print("Taken out of the merge queue (usually by the queue, when its checks failed) and not re-added; "
+              "they also appear in the tables above or below.\n")
+        print("| PR | Title | Author | Removed (UTC) | By | Now |")
+        print("|---|---|---|---|---|---|")
+        for p, (at, by), why in removed:
+            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {at} | {by} | {why or 'can merge'} |")
 
     if humans:
         print(f"\n## For a human ({len(humans)})\n")
