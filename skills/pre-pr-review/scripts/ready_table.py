@@ -177,9 +177,14 @@ def main():
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        if removal:
-            removed.append((p, removal, why))
+        # Only once every finding is closed: while one is open, the author has work to do first.
+        if checks and not (why and why.startswith("open findings")):
+            humans.append((p, checks))
         note = f" ({answered} answered by the author, check by hand)" if answered else ""
+        if removal:
+            # The queue rejected it (or someone took it out): listed only in its own table, not as mergeable.
+            removed.append((p, removal, (why or "no blocker found; re-queue it") + note))
+            continue
         if why and not waits:
             # Queued with our findings still open: it lands anyway, so flag it.
             blocked.append((p, why + note + (f" · in merge queue (#{q[0]})" if q else "")))
@@ -188,9 +193,6 @@ def main():
             mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})" + note, decision))
         else:
             mergeable.append((p, (f"after {why}" if waits else "ready") + note, decision))
-        # Only once every finding is closed: while one is open, the author has work to do first.
-        if checks and not (why and why.startswith("open findings")):
-            humans.append((p, checks))
     # Queued PRs first, in queue order; the rest keep PR order.
     mergeable.sort(key=lambda m: queue[m[0]["number"]][0] if m[0]["number"] in queue else len(queue) + 1)
 
@@ -205,6 +207,7 @@ def main():
     print(f"| ↳ ready | {ready} |")
     print(f"| ↳ after CI | {len(mergeable) - ready - in_queue} |")
     print(f"| Cannot merge | {len(blocked)} |")
+    print(f"| Removed from merge queue | {len(removed)} |")
     print(f"| Drafts | {sum(1 for _, w in parked if w == 'draft')} |")
     print(f"| Held by label (don't-merge/dnm/hold/wip) | {sum(1 for _, w in parked if w != 'draft')} |\n")
     print(f"## Can merge ({len(mergeable)})\n")
@@ -221,12 +224,12 @@ def main():
 
     if removed:
         print(f"\n## Removed from merge queue ({len(removed)})\n")
-        print("Taken out of the merge queue (usually by the queue, when its checks failed) and not re-added; "
-              "they also appear in the tables above or below.\n")
+        print("Taken out of the merge queue (usually by the queue, when its checks failed) and not re-added. "
+              "Listed only here, not under Can merge or Cannot merge; Now says what still blocks each one.\n")
         print("| PR | Title | Author | Removed (UTC) | By | Now |")
         print("|---|---|---|---|---|---|")
         for p, (at, by), why in removed:
-            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {at} | {by} | {why or 'can merge'} |")
+            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {at} | {by} | {why} |")
 
     if humans:
         print(f"\n## For a human ({len(humans)})\n")
