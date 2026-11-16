@@ -126,7 +126,9 @@ Report each violation with SHA + subject. When posting, commit, PR title and PR 
 
 ### 4. Diff + design review
 
-**Base check, before any finding is posted:** confirm the problem is introduced by the PR. Run the repro, or read the code, on the base as well. If the same problem exists on main, it is pre-existing. Report it under pre-existing issues in the chat report, and suggest an issue if it is worth one. Don't post it as a PR finding, even when the PR moved, renamed, re-indented or restructured the code so that the lines show up in the diff.
+**Base check, before any finding is posted:** confirm the problem is introduced by the PR. Run the repro, or read the code, on the base as well. If the same problem exists on main, it is pre-existing. Report it under pre-existing issues in the chat report, with a repro, its output on main and a duplicate search, so it is filed as an issue (an existing issue gets a comment only if the repro adds a case). Don't post it as a PR finding, even when the PR moved, renamed, re-indented or restructured the code so that the lines show up in the diff.
+
+**Out of scope never goes on the PR.** Anything the PR didn't introduce (a pre-existing bug, a gap in a clause or position the PR doesn't touch, a looser check elsewhere that lets a test pass) becomes an issue, never a PR comment: not an inline finding, not a `summary.items` entry, and not a "related" or "FYI" sentence inside an in-scope finding. When an in-scope finding has an out-of-scope cause (e.g. a fixture that passes only because of a pre-existing bug), the comment states the in-scope problem and fix only; the cause goes to its issue.
 
 Findings the PR does introduce are still worth raising even if the author may reject them. A Nit the author declines is resolved with a reply.
 
@@ -255,7 +257,7 @@ Compare each new declaration and function with its neighbours in the same file a
 - A package-level variable added to a `var (...)` block that otherwise holds only interface assertions (`_ I = &T{}`), or placed away from its only user, when the file declares such variables as standalone `var x = ...`
 - Control flow that is harder to read than it needs to be, e.g. assigning a variable through an `if` only to return it where an early return reads directly
 
-When a Nit names a pattern, search the rest of the diff and the touched file for the same pattern. Raise each hit in the diff as its own Nit. In the Nit's body, name pre-existing hits in the same file or package that should change with it (e.g. "`newXMLSequence` could reuse it for empty sequences"), so the author can fix them together.
+When a Nit names a pattern, search the rest of the diff and the touched file for the same pattern. Raise each hit in the diff as its own Nit. Pre-existing hits outside the diff stay out of the Nit; list them under pre-existing issues in the chat report (see **Out of scope never goes on the PR**).
 
 #### Unnecessary / large comments
 
