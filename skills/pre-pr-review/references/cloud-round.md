@@ -12,7 +12,11 @@ Review rounds run in a Claude Code cloud session (claude.ai/code): a routine eve
 ## 2. Start check (before installing anything)
 1. `STARTED` = now in Asia/Colombo, `YYYY-MM-DD HH:MM`; `STARTED_UTC` = now in UTC, ISO 8601.
 2. **Is a round running?** `ArtifactData get` on `BOARD`, collection `state`, doc `lock`. If it exists and its `heartbeat_utc` is less than 3 hours old, another round is running: stop with one line saying which; nothing else.
-3. **Did anything change?** `cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py > /tmp/review-scan-start.txt`. Read `state/scan` (if it exists) and write its `lines` to `/tmp/review-scan-saved.txt`, one per line. `$S unchanged /tmp/review-scan-start.txt /tmp/review-scan-saved.txt`: exit 0 means no PR changed since the last round. Stop with one line saying so; nothing else.
+3. **Did anything change?** `cd $TOOLS/skills/pre-pr-review/scripts && python3 scan_prs.py > /tmp/review-scan-start.txt`. Read `state/scan` (if it exists) and write its `lines` to `/tmp/review-scan-saved.txt`, one per line. `$S unchanged /tmp/review-scan-start.txt /tmp/review-scan-saved.txt`: exit 0 means no PR head changed since the last round. Nothing needs review, but merge-queue, approval, CI and merge changes still move PRs between the board's tables, so refresh them and stop (no lock; `state/scan` stays as it is):
+   - `ArtifactData get` `reports/latest`; write its `markdown` to `/tmp/report.md` and keep its `version`.
+   - `python3 ready_table.py > /tmp/tables.md`, then `$S refresh-tables /tmp/report.md /tmp/tables.md "<now, Asia/Colombo>" > /tmp/report-new.md`.
+   - Exit 0 (the tables changed): write `{"markdown": <the text of /tmp/report-new.md>}` to `/tmp/report-new.json` and `ArtifactData update` `reports/latest` with that `file_path` and `if_version` = the version you read. A refusal means a round wrote the report meanwhile; leave it. Exit 1 (no change) or 2 (no tables in the report): write nothing.
+   - Stop with one line: no PR changed, tables refreshed or unchanged.
 4. **Take the lock.** Write `state/lock` with `{"started": STARTED, "started_utc": STARTED_UTC, "heartbeat_utc": STARTED_UTC, "session": <this session's URL or id, if known>}`:
    - no lock existed: `set` without `if_version`. The store refuses it if another session created the lock first; then stop as in step 2.
    - a stale lock existed (heartbeat 3 hours or older): `set` with `if_version` = the version you read, and say in the report that you took over a stalled round. A refusal means someone else took it: stop.

@@ -14,6 +14,11 @@ repository_dispatch events.
                                   lock is still ours on the board right before calling this.
   round_state.py wait-posted <findings.json> [minutes]
                                   wait (default 15 min) until the PR's summary shows the reviewed head
+  round_state.py refresh-tables <report.md> <tables.md> <when>
+                                  print the report with its open-PR tables (from the **Open PRs** line through the
+                                  Drafts and held table) replaced by a fresh ready_table.py output, under a
+                                  "Tables refreshed <when>" line; exit 0 if the tables changed, 1 if they didn't,
+                                  2 if the report has no tables block
 """
 import os
 import subprocess
@@ -100,9 +105,35 @@ def wait_posted(findings, minutes="15"):
         time.sleep(30)
 
 
+TABLE_HEADINGS = ("## Can merge", "## For a human", "## Cannot merge", "## Drafts and held", "## Findings all answered")
+REFRESHED = "_Tables refreshed "
+
+
+def refresh_tables(report_file, tables_file, when):
+    """Swap the report's open-PR tables for fresh ones, so merge-queue, approval and CI changes show between
+    rounds even when no PR head moved."""
+    lines = open(report_file).read().split("\n")
+    start = next((i for i, l in enumerate(lines) if l.startswith("**Open PRs:")), None)
+    if start is None:
+        print("no **Open PRs** line in the report", file=sys.stderr)
+        return 2
+    if start > 0 and lines[start - 1].startswith(REFRESHED):
+        start -= 1
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i].startswith("## ") and not lines[i].startswith(TABLE_HEADINGS)), len(lines))
+    old = "\n".join(l for l in lines[start:end] if not l.startswith(REFRESHED)).strip()
+    new = open(tables_file).read().strip()
+    if old == new:
+        return 1
+    block = [f"{REFRESHED}{when}; the rest of the report is from the last round._", ""] + new.split("\n") + [""]
+    print("\n".join(lines[:start] + block + lines[end:]))
+    return 0
+
+
 def main():
     cmd, args = (sys.argv[1], sys.argv[2:]) if len(sys.argv) > 1 else ("", [])
-    commands = {"unchanged": (unchanged, 2), "saved-scan": (saved_scan, 2), "send": (send, 3), "wait-posted": (wait_posted, 2)}
+    commands = {"unchanged": (unchanged, 2), "saved-scan": (saved_scan, 2), "send": (send, 3), "wait-posted": (wait_posted, 2),
+                "refresh-tables": (refresh_tables, 3)}
     if cmd == "wait-posted" and len(args) == 1:
         return wait_posted(args[0])
     if cmd not in commands or len(args) != commands[cmd][1]:
