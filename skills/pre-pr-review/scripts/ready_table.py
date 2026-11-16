@@ -9,8 +9,8 @@ A PR can merge when all of these hold:
 - no CI check on the head failed (skipped/neutral count as passed; pending ones show as "after CI pending")
 - our latest "PR review summary" reviewed the current head and reports 0 findings
 - none of our finding threads is unresolved
-Findings the summary still lists count as closed when the author has replied to every one (the Findings
-all answered table lists them for a manual check). A "👤 For a human" item in our summary (a decline the
+Findings the summary still lists count as closed when the author has replied to every one; the PR's row in
+Can merge or Cannot merge says how many, for a manual check. A "👤 For a human" item in our summary (a decline the
 reviewer still doubts) doesn't block merging; the
 For a human table lists them for a manual check.
 
@@ -141,7 +141,7 @@ def auto_merge(p):
 
 
 def main():
-    mergeable, blocked, parked, humans, replied = [], [], [], [], []
+    mergeable, blocked, parked, humans = [], [], [], []
     prs = sorted(open_prs(), key=lambda p: p["number"])
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
@@ -165,21 +165,17 @@ def main():
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
         q = queue.get(p["number"])
+        note = f" ({answered} answered by the author, check by hand)" if answered else ""
         if why and not waits:
             # Queued with our findings still open: it lands anyway, so flag it.
-            blocked.append((p, why + (f" · in merge queue (#{q[0]})" if q else "")))
+            blocked.append((p, why + note + (f" · in merge queue (#{q[0]})" if q else "")))
         elif q:
             # The queue runs its own checks, so pending CI on the head doesn't matter here.
-            mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})", decision))
+            mergeable.append((p, f"in merge queue (#{q[0]}, {q[1]})" + note, decision))
         else:
-            state = f"after {why}" if waits else "ready"
-            if answered:
-                state += f" ({answered} answered by the author, check by hand)"
-            mergeable.append((p, state, decision))
+            mergeable.append((p, (f"after {why}" if waits else "ready") + note, decision))
         if checks:
             humans.append((p, checks))
-        if answered:
-            replied.append((p, answered, why))
     # Queued PRs first, in queue order; the rest keep PR order.
     mergeable.sort(key=lambda m: queue[m[0]["number"]][0] if m[0]["number"] in queue else len(queue) + 1)
 
@@ -201,16 +197,6 @@ def main():
               f"{decision.replace('_', ' ').lower()} | {auto_merge(p)} | {state} |")
     if not mergeable:
         print("| — | none | | | | |")
-
-    if replied:
-        print(f"\n## Findings all answered ({len(replied)})\n")
-        print("Every finding our summary still lists has a reply from the author (a decline, a deferral or a question)"
-              ", so they count as closed. Read the replies and decide; the last column is"
-              " whatever else keeps the PR from merging.\n")
-        print("| PR | Title | Author | Answered | Otherwise |")
-        print("|---|---|---|---|---|")
-        for p, k, why in replied:
-            print(f"| {link(p)} | {title(p, 60)} | {p['user']['login']} | {k} | {why or 'can merge'} |")
 
     if humans:
         print(f"\n## For a human ({len(humans)})\n")
