@@ -18,7 +18,7 @@ repository_dispatch events.
                                   print the report with its open-PR tables (from the **Open PRs** line through the
                                   Drafts and held table) replaced by a fresh ready_table.py output, under a
                                   "Tables refreshed <when>" line; exit 0 if the tables changed, 1 if they didn't,
-                                  2 if the report has no tables block
+                                  2 if the report or the tables file has no tables block
 """
 import os
 import subprocess
@@ -117,16 +117,20 @@ def refresh_tables(report_file, tables_file, when):
     if start is None:
         print("no **Open PRs** line in the report", file=sys.stderr)
         return 2
-    if start > 0 and lines[start - 1].startswith(REFRESHED):
+    while start > 0 and (lines[start - 1].startswith(REFRESHED) or not lines[start - 1].strip()):
         start -= 1
     end = next((i for i in range(start + 1, len(lines))
                 if lines[i].startswith("## ") and not lines[i].startswith(TABLE_HEADINGS)), len(lines))
     old = "\n".join(l for l in lines[start:end] if not l.startswith(REFRESHED)).strip()
     new = open(tables_file).read().strip()
+    if not new.startswith("**Open PRs:"):
+        print("the tables file doesn't start with an **Open PRs** line (did ready_table.py fail?)", file=sys.stderr)
+        return 2
     if old == new:
         return 1
-    block = [f"{REFRESHED}{when}; the rest of the report is from the last round._", ""] + new.split("\n") + [""]
-    print("\n".join(lines[:start] + block + lines[end:]))
+    head = lines[:start] + ([""] if start else [])
+    block = [f"{REFRESHED}{when}; filed issues below are from the last round._", ""] + new.split("\n") + [""]
+    print("\n".join(head + block + lines[end:]))
     return 0
 
 
