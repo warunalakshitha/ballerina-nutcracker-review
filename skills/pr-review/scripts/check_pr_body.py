@@ -12,7 +12,12 @@ template when it changes. Reported, one line each:
   PLACEHOLDER the `Fixes #<Issue Number>` line left as is
   NO-ISSUE    no closing keyword (Fixes/Closes/Resolves #N) and no line saying why there's no issue
   CHECKBOX    a ticked checklist item the diff doesn't match: corpus tests ticked but no corpus file added or
-              changed; the subset doc ticked but no doc/lang/subset<N>.md change
+              changed; the subset doc ticked but no doc/lang/subset<N>.md or doc/library/subset<N>.md change
+  CLOSED      a closing keyword (Fixes/Closes/Resolves, with or without a colon) names an issue of this repo that
+              is already closed, so the PR fixes nothing it claims to
+  PATH        a backticked path in the body that the PR doesn't add or change (a stale description after a
+              commit was dropped, or a file the PR renamed away); read each hit, since a body may also point at
+              an unchanged file on purpose
 
 Report everything as one PR-level Nit listing the problems, not one finding each. Exit status 1 when anything is
 reported, 0 when the body matches the template.
@@ -24,7 +29,11 @@ import subprocess
 import sys
 
 REQUIRED = ("Purpose", "Approach")
-CLOSING = re.compile(r"\b(fix(e[sd])?|close[sd]?|resolve[sd]?)\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
+CLOSING = re.compile(r"\b(fix(e[sd])?|close[sd]?|resolve[sd]?):?\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
+# A backticked token that may be a repo path; kept when it ends in a file extension, or has a slash and starts at
+# a top-level directory or a corpus subset (so module names like `ballerina/tcp` are skipped).
+PATH_TOKEN = re.compile(r"`([A-Za-z0-9_.{},*…/-]+)`")
+FILE_EXT = re.compile(r"\.(go|bal|md|txt|txtar|toml|ya?ml|py|sh|json|mod)$")
 NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b", re.I)
 
 
@@ -79,13 +88,38 @@ def main():
         problems.append("PLACEHOLDER 'Fixes #<Issue Number>' left unchanged")
     elif not CLOSING.search(body) and not NO_ISSUE.search(body):
         problems.append("NO-ISSUE    no 'Fixes #N' (or Closes/Resolves) and no line saying why there's no issue")
+    for m in CLOSING.finditer(body):
+        ref = m.group(3)
+        num = re.search(r"(\d+)$", ref).group(1)
+        if ref.startswith("http") and f"github.com/{repo}/issues/" not in ref:
+            continue
+        issue = api(f"repos/{repo}/issues/{num}")
+        if issue.get("state") == "closed":
+            problems.append(f"CLOSED      '{m.group(0)}' names #{num}, which is already closed ({issue.get('state_reason')})")
+    pr_files = api(f"repos/{repo}/pulls/{n}/files")
+    files = [f["filename"] for f in pr_files if f["status"] != "removed"]
+    gone = {f["filename"]: "deletes it" for f in pr_files if f["status"] == "removed"}
+    gone.update({f["previous_filename"]: f"renames it to {f['filename']}" for f in pr_files if f.get("previous_filename")})
+    top = {e["name"] for e in api(f"repos/{repo}/contents?ref={pr['head']['sha']}") if e["type"] == "dir"}
+    for token in dict.fromkeys(PATH_TOKEN.findall(body)):
+        first = token.split("/")[0]
+        if not FILE_EXT.search(token) and ("/" not in token or first not in top and not re.match(r"subset\d+$", first)):
+            continue
+        prefix = re.split(r"[{*…]|\.\.\.", token)[0]
+        if prefix != token:
+            hit = lambda f: prefix in f
+        else:
+            hit = lambda f: f == token or f.endswith("/" + token) or f.startswith(token + "/") or f"/{token}/" in f
+        if any(hit(f) for f in files):
+            continue
+        what = next((f"; the PR {v}" for k, v in gone.items() if hit(k)), "")
+        problems.append(f"PATH        `{token}` is named in the body but the PR doesn't add or change it{what}")
     ticked = [l for l in body.splitlines() if re.match(r"\s*[-*]\s*\[[xX]\]", l)]
     if ticked:
-        files = [f["filename"] for f in api(f"repos/{repo}/pulls/{n}/files")]
         if any("corpus test" in l.lower() for l in ticked) and not any(f.startswith("corpus/") for f in files):
             problems.append("CHECKBOX    corpus tests ticked, but the PR adds or changes no file under corpus/")
-        if any("subset" in l.lower() for l in ticked) and not any(re.match(r"doc/lang/subset\d+\.md$", f) for f in files):
-            problems.append("CHECKBOX    subset doc ticked, but the PR doesn't change doc/lang/subset<N>.md")
+        if any("subset" in l.lower() for l in ticked) and not any(re.match(r"doc/(lang|library)/subset\d+\.md$", f) for f in files):
+            problems.append("CHECKBOX    subset doc ticked, but the PR doesn't change doc/lang/subset<N>.md or doc/library/subset<N>.md")
     for p in problems:
         print(p)
     return 1 if problems else 0
