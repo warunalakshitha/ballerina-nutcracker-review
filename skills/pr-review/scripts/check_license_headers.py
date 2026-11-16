@@ -17,7 +17,9 @@ the year of the commit.
              line is shown
   GENERATOR  an added non-.go/.bal file (a generator or template) that embeds a
              license header but not the hook's text, so regenerated files will
-             mismatch again
+             mismatch again. A script's own `#` comment header doesn't count:
+             only header text outside `#` comment lines, which the script can
+             write into its outputs
 
 Files under cli/templates/ are exempt. Report all hits as one PR-level Nit
 listing the files, not one finding per file. Exit status 1 when anything is
@@ -50,6 +52,11 @@ def normalize_year(line):
     return YEAR_RE.sub("// Copyright (c) YEAR, ", line)
 
 
+def embeds_header(text):
+    """True when header text appears outside the file's own `#` comment lines."""
+    return any("licenses this file to you" in line and not line.lstrip().startswith("#") for line in text.split("\n"))
+
+
 def main():
     base = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
     try:
@@ -72,7 +79,7 @@ def main():
                 index = next((i for i, (a, b) in enumerate(zip(lines, header)) if a != b), len(lines))
                 got = lines[index] if index < len(lines) else "<missing>"
                 mismatches.append((path, index + 1, got, header[index]))
-        elif path.endswith(GENERATOR_SUFFIXES) and "/testdata/" not in path and "licenses this file to you" in text:
+        elif path.endswith(GENERATOR_SUFFIXES) and "/testdata/" not in path and embeds_header(text):
             body = "\n".join(header[1:])
             if body not in normalize_year(text):
                 generators.append(path)
