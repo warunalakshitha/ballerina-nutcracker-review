@@ -159,10 +159,13 @@ already raised — humans, CodeRabbit, other bots and agents (everything except
 this skill's own marked comments):
 
 ```bash
-gh api repos/<owner>/<repo>/pulls/<N>/comments --paginate   # inline threads
-gh api repos/<owner>/<repo>/pulls/<N>/reviews --paginate    # review bodies
-gh api repos/<owner>/<repo>/issues/<N>/comments --paginate  # PR conversation
+gh api "repos/<owner>/<repo>/pulls/<N>/comments?per_page=100&page=1"   # inline threads
+gh api "repos/<owner>/<repo>/pulls/<N>/reviews?per_page=100&page=1"    # review bodies
+gh api "repos/<owner>/<repo>/issues/<N>/comments?per_page=100&page=1"  # PR conversation
 ```
+
+Page by hand (`page=2`, … while a page has 100 items), never with `--paginate`:
+it follows `repositories/{id}` links that the cloud proxy refuses with 403.
 
 Collect again before every re-post: bots often review after you do (CodeRabbit's
 #1061 review, with an outside-diff finding in its body, arrived two minutes
