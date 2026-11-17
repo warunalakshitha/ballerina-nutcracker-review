@@ -207,7 +207,8 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     for f, where in placed:
         if where == "pr":
             loc = f" (`{f['path']}:{f['line']}` isn't in the diff)" if f.get("path") and f.get("line") else ""
-            items.append(f"{SEVERITY_BADGE[f['severity']]} **{SEVERITY_LABEL[f['severity']]}** · {f['title']} — {f['body'].strip()}{loc}")
+            items.append(f"{SEVERITY_BADGE[f['severity']]} **{SEVERITY_LABEL[f['severity']]}** · {f['title']} — {f['body'].strip()}{loc}"
+                         f" {FINDING_MARKER.format(f['id'])}")
     if items:
         lines.append("")
         lines += [f"- {i}" for i in items]
@@ -409,20 +410,22 @@ def main():
         if fid not in current and not threads.get(c["id"], (None, False))[1]:
             plan["resolve"].append(c)
 
-    all_ids = {f["id"] for f in data["findings"]}
-    withdrawn_roots = {c["in_reply_to_id"] for c in review_comments
-                       if c.get("in_reply_to_id") and c["user"]["login"] == me and c["body"].startswith(WITHDRAWN_PREFIX)}
-    gone = [fid for fid in existing if fid not in all_ids]
-    withdrawn_ids = {fid for fid in gone if existing[fid]["id"] in withdrawn_roots}
-    # Findings the author answered (declined, deferred to an issue, or resolved without a change) aren't "fixed".
-    answered_ids = set(data.get("answered", [])) & set(gone) - withdrawn_ids
-    summary = render_summary(data, placed, len(gone) - len(withdrawn_ids) - len(answered_ids), len(withdrawn_ids),
-                             coderabbit_thread_counts(roots, threads), len(answered_ids))
     issue_comments = paged(f"{base}/issues/{num}/comments")
     # Edit the most recently updated summary; older duplicates (e.g. from another session) are left alone.
     summaries = [c for c in issue_comments if c["user"]["login"] == me and (
         c["body"].startswith("<!-- pre-pr-review:summary") or c["body"].startswith(LEGACY_SUMMARY_PREFIX + str(num)))]
     old_summary = max(summaries, key=lambda c: c["updated_at"], default=None)
+    # PR-level findings live in the summary, each item carrying its id marker; one gone since then counts too.
+    summary_ids = FINDING_ID_RE.findall(old_summary["body"]) if old_summary else []
+    all_ids = {f["id"] for f in data["findings"]}
+    withdrawn_roots = {c["in_reply_to_id"] for c in review_comments
+                       if c.get("in_reply_to_id") and c["user"]["login"] == me and c["body"].startswith(WITHDRAWN_PREFIX)}
+    gone = [fid for fid in dict.fromkeys([*existing, *summary_ids]) if fid not in all_ids]
+    withdrawn_ids = {fid for fid in gone if fid in existing and existing[fid]["id"] in withdrawn_roots}
+    # Findings the author answered (declined, deferred to an issue, or resolved without a change) aren't "fixed".
+    answered_ids = set(data.get("answered", [])) & set(gone) - withdrawn_ids
+    summary = render_summary(data, placed, len(gone) - len(withdrawn_ids) - len(answered_ids), len(withdrawn_ids),
+                             coderabbit_thread_counts(roots, threads), len(answered_ids))
 
     warnings = (brevity_warnings(data) + overlap_warnings(plan["new_line"] + plan["new_file"], others, threads)
                 + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files))
