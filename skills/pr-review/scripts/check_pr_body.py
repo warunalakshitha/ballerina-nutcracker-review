@@ -10,7 +10,8 @@ template when it changes. Reported, one line each:
   MISSING     a `## ` section of the template that the body doesn't have (e.g. a Goals/Design layout instead)
   EMPTY       a required section (Purpose, Approach) with nothing but the template's hint in it
   PLACEHOLDER the `Fixes #<Issue Number>` line left as is
-  NO-ISSUE    no closing keyword (Fixes/Closes/Resolves #N) and no line saying why there's no issue
+  NO-ISSUE    no closing keyword (Fixes/Closes/Resolves #N), no non-closing link (Part of/Related to/Refs #N) and no
+              line saying why there's no issue
   CHECKBOX    a ticked checklist item the diff doesn't match: corpus tests ticked but no corpus file added or
               changed; the subset doc ticked but no doc/lang/subset<N>.md or doc/library/subset<N>.md change
   CLOSED      a closing keyword (Fixes/Closes/Resolves, with or without a colon) names an issue of this repo that
@@ -34,7 +35,8 @@ CLOSING = re.compile(r"\b(fix(e[sd])?|close[sd]?|resolve[sd]?):?\s+(#\d+|https:/
 # a top-level directory or a corpus subset (so module names like `ballerina/tcp` are skipped).
 PATH_TOKEN = re.compile(r"`([A-Za-z0-9_.{},*…/-]+)`")
 FILE_EXT = re.compile(r"\.(go|bal|md|txt|txtar|toml|ya?ml|py|sh|json|mod)$")
-NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b", re.I)
+NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b"
+                      r"|\b(part of|related to|relates to|refs?|see|follow-up (to|of))\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
 
 
 def api(path):
@@ -87,7 +89,7 @@ def main():
     if "Fixes #<Issue Number>" in body:
         problems.append("PLACEHOLDER 'Fixes #<Issue Number>' left unchanged")
     elif not CLOSING.search(body) and not NO_ISSUE.search(body):
-        problems.append("NO-ISSUE    no 'Fixes #N' (or Closes/Resolves) and no line saying why there's no issue")
+        problems.append("NO-ISSUE    no 'Fixes #N' (or Closes/Resolves), no 'Part of #N' and no line saying why there's no issue")
     for m in CLOSING.finditer(body):
         ref = m.group(3)
         num = re.search(r"(\d+)$", ref).group(1)
@@ -109,7 +111,8 @@ def main():
         if prefix != token:
             hit = lambda f: prefix in f
         else:
-            hit = lambda f: f == token or f.endswith("/" + token) or f.startswith(token + "/") or f"/{token}/" in f
+            path = token.rstrip("/")
+            hit = lambda f: f == path or f.endswith("/" + path) or f.startswith(path + "/") or f"/{path}/" in f
         if any(hit(f) for f in files):
             continue
         what = next((f"; the PR {v}" for k, v in gone.items() if hit(k)), "")
