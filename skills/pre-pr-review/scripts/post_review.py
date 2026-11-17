@@ -306,6 +306,19 @@ def anchor_warnings(placed, pr_files):
             for f, where in placed if where == "line" and BARE_LINE.match(text.get((f["path"], f["line"]), "x"))]
 
 
+def body_warnings(data, repo, num, placed):
+    """check_pr_body.py reports problems but no PR-level finding is about the body: the Nit was dropped."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "pr-review", "scripts", "check_pr_body.py")
+    r = subprocess.run([sys.executable, script, str(num), repo], capture_output=True, text=True, timeout=300)
+    if r.returncode != 1 or not r.stdout.strip():
+        return []
+    if any(where == "pr" and re.search(r"\bbody\b|description", f"{f['title']} {f['body']}", re.I) for f, where in placed):
+        return []
+    lines = "; ".join(" ".join(l.split()) for l in r.stdout.splitlines() if l.strip())
+    return [f"check_pr_body.py reports {lines}, but no PR-level finding covers the PR body; add the PR-body Nit "
+            "(SKILL.md step 3.6), unless the author already answered it"]
+
+
 def graphql_available():
     """Claude Code cloud sessions block GraphQL; they expose review threads through REST `ccr` routes instead."""
     global _GRAPHQL
@@ -428,7 +441,7 @@ def main():
                              coderabbit_thread_counts(roots, threads), len(answered_ids))
 
     warnings = (brevity_warnings(data) + overlap_warnings(plan["new_line"] + plan["new_file"], others, threads)
-                + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files))
+                + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files) + body_warnings(data, repo, num, placed))
     write_preview(out, data, placed, bodies, plan, summary, old_summary, warnings, head, fixed_by)
     print(f"Preview: {out}")
     for w in warnings:
