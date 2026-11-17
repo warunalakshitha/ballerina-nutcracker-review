@@ -17,8 +17,9 @@ template when it changes. Reported, one line each:
   CLOSED      a closing keyword (Fixes/Closes/Resolves, with or without a colon) names an issue of this repo that
               is already closed, so the PR fixes nothing it claims to
   PATH        a backticked path in the body that the PR doesn't add or change (a stale description after a
-              commit was dropped, or a file the PR renamed away); read each hit, since a body may also point at
-              an unchanged file on purpose
+              commit was dropped, or a file the PR renamed away), or a corpus fixture stem without its extension
+              (`foo-v`, `foo-e`, `foo-p`, `foo-fv`, ...) that no file the PR adds or changes is named after; read
+              each hit, since a body may also point at an unchanged file on purpose
 
 Report everything as one PR-level Nit listing the problems, not one finding each. Exit status 1 when anything is
 reported, 0 when the body matches the template.
@@ -35,6 +36,8 @@ CLOSING = re.compile(r"\b(fix(e[sd])?|close[sd]?|resolve[sd]?):?\s+(#\d+|https:/
 # a top-level directory or a corpus subset (so module names like `ballerina/tcp` are skipped).
 PATH_TOKEN = re.compile(r"`([A-Za-z0-9_.{},*…/-]+)`")
 FILE_EXT = re.compile(r"\.(go|bal|md|txt|txtar|toml|ya?ml|py|sh|json|mod)$")
+# A corpus fixture named by its stem, e.g. `start-action-cast-v` for corpus/bal/.../start-action-cast-v.bal.
+FIXTURE_STEM = re.compile(r"^[a-z0-9][a-z0-9_-]*-f?[vep]$")
 NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b"
                       r"|\b(part of|related to|relates to|refs?|see|follow-up (to|of))\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
 
@@ -104,6 +107,13 @@ def main():
     gone.update({f["previous_filename"]: f"renames it to {f['filename']}" for f in pr_files if f.get("previous_filename")})
     top = {e["name"] for e in api(f"repos/{repo}/contents?ref={pr['head']['sha']}") if e["type"] == "dir"}
     for token in dict.fromkeys(PATH_TOKEN.findall(body)):
+        if FIXTURE_STEM.match(token):
+            stem = lambda f: f.rsplit("/", 1)[-1].split(".", 1)[0]
+            if any(stem(f) == token for f in files):
+                continue
+            what = next((f"; the PR {v}" for k, v in gone.items() if stem(k) == token), "")
+            problems.append(f"PATH        `{token}` names a corpus fixture the PR doesn't add or change{what}")
+            continue
         first = token.split("/")[0]
         if not FILE_EXT.search(token) and ("/" not in token or first not in top and not re.match(r"subset\d+$", first)):
             continue
