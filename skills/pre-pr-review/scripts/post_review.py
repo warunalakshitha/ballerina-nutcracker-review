@@ -35,6 +35,8 @@ PREFIX = "🤖"
 FINDING_MARKER = "<!-- pre-pr-review:finding id={} -->"
 SUMMARY_MARKER = "<!-- pre-pr-review:summary pr={} diff={} skill={} -->"
 FINDING_ID_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
+ANSWERED_MARKER = "<!-- pre-pr-review:answered ids={} -->"
+ANSWERED_RE = re.compile(r"<!-- pre-pr-review:answered ids=(\S+) -->")
 LEGACY_SUMMARY_PREFIX = "# Review report — #"
 SEVERITY_LABEL = {"important": "Important", "verify": "Verify", "nit": "Nit"}
 SEVERITY_BADGE = {"important": "🔴", "verify": "🟡", "nit": "🔵"}
@@ -189,6 +191,8 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     marker = SUMMARY_MARKER.format(data["pr"], data["reviewed_diff"][:8], data["skill_version"][:8])
     if commit := skill_commit(data):
         marker = marker.replace(" -->", f" tools={commit} -->")
+    if data.get("answered"):
+        marker += "\n" + ANSWERED_MARKER.format(",".join(data["answered"]))
     lines = [marker,
              f"## 🤖 PR review summary · #{data['pr']}", status]
     stack = data.get("stack")
@@ -433,6 +437,9 @@ def main():
     all_ids = {f["id"] for f in data["findings"]}
     withdrawn_roots = {c["in_reply_to_id"] for c in review_comments
                        if c.get("in_reply_to_id") and c["user"]["login"] == me and c["body"].startswith(WITHDRAWN_PREFIX)}
+    # Answered ids ride in the summary's hidden marker, so the list survives rounds even if an agent drops one.
+    prior_answered = ANSWERED_RE.search(old_summary["body"]) if old_summary else None
+    data["answered"] = sorted(set(data.get("answered", [])) | set(prior_answered.group(1).split(",") if prior_answered else []))
     gone = [fid for fid in dict.fromkeys([*existing, *summary_ids]) if fid not in all_ids]
     withdrawn_ids = {fid for fid in gone if fid in existing and existing[fid]["id"] in withdrawn_roots}
     # Findings the author answered (declined, deferred to an issue, or resolved without a change) aren't "fixed".
