@@ -8,7 +8,8 @@ For each package README under lib/stdlibs/ballerina/ that the PR adds or changes
 `ballerina-platform/ballerina-library` issue linked under `Notable Behavioural Changes` marks a jBallerina bug the
 port fixes. stdlib-review.md asks that the corpus `@output` showing the fixed behaviour cite that issue in a
 comment. The corpus tests of a module are the `.bal` files under corpus/ that import it and the `_test.go` files
-under corpus/ whose name contains the module name (e.g. corpus/extern/tcp_client_test.go).
+under corpus/ whose name contains the module name (e.g. corpus/extern/tcp_client_test.go). A citation is
+`ballerina-library#N`, an issue URL, or a bare `#N` on a line that mentions jBallerina (common in Go-embedded tests).
 
   UNCITED   <README>: #<issue> (<bullet title>)   no corpus test importing the module mentions the issue
 
@@ -32,6 +33,12 @@ def notable_bullets(text):
     return re.findall(r"^\s*[-*]\s+(.*)$", m.group(1), re.M) if m else []
 
 
+def cited(issue, text):
+    if re.search(rf"ballerina-library(?:#|/issues/){issue}\b", text):
+        return True
+    return any("jballerina" in line.lower() for line in re.findall(rf"^.*(?<![\w/])#{issue}\b.*$", text, re.M))
+
+
 def main():
     base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
     base = git("merge-base", base_ref, "HEAD").strip()
@@ -48,7 +55,7 @@ def main():
         for bullet in notable_bullets(git("show", f"HEAD:{readme}")):
             title = re.match(r"\*\*(.+?)\*\*", bullet)
             for issue in dict.fromkeys(ISSUE.findall(bullet)):
-                if not re.search(rf"ballerina-library(?:#|/issues/){issue}\b", text):
+                if not cited(issue, text):
                     found += 1
                     print(f"UNCITED   {readme}: #{issue} ({title.group(1) if title else bullet[:60]})")
     return 1 if found else 0
