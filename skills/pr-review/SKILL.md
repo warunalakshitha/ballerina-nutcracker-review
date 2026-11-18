@@ -48,7 +48,7 @@ Review progress:
 - [ ] 1. Fetch PR metadata + checkout
 - [ ] 2. Initial understanding (fix / example .bal / impl summary) — write this first in the report
 - [ ] 3. Commits / authors / trailers
-- [ ] 4. Diff + design review (approach, root-cause design checks, security, agent failure modes, unnecessary / large comments)
+- [ ] 4. Diff + design review (approach, root-cause design checks, security, agent failure modes, unnecessary / large comments (`check_comment_blocks.py`), names)
 - [ ] 5. Go validation + data races (static review and `-race`)
 - [ ] 6. Unused / unneeded files, unused and test-only symbols, license headers (`check_license_headers.py`), duplicate tests, test locations, skip-list entries (issue open + test still fails)
 - [ ] 7. Subset doc updated for support / restriction / deviation changes
@@ -278,12 +278,32 @@ Per `doc/guides/CODING_STYLE.md`: do not add comments that narrate code or resta
 - Oversized doc comments on unexported helpers or tests (`TestXxx` included) that only repeat the function name
 - Commented-out code left in the PR
 - Comments that belong in the PR description or a design doc, not in source
+- References to jBallerina internals or parity claims (`mirrors execute.bal#startSuite byte for byte`, `ported from ReportData`, `matches RunTestsTask#…`): the behaviour belongs in a corpus test, and a reader of this code doesn't have the jBallerina source open
+
+Start with the mechanical pass, then read. Run it over the whole PR diff on every review, re-reviews included, since a block an earlier round skipped is still a finding:
+
+```bash
+python3 "$TOOLS/skills/pr-review/scripts/check_comment_blocks.py" <base>
+```
+
+It lists the added `//` blocks of 6 or more lines (`LONG`, or `PKGDOC` for a package doc) and blocks of any length that name jBallerina internals (`REFS`) or narrate history (`HISTORY`). A `LONG` block is a Nit unless every line states a contract the signature can't (nil behaviour, call order, concurrency) or a non-obvious why; the suggestion is the one or two lines that remain. A `PKGDOC` is allowed at length but still loses `REFS`/`HISTORY` text. Read each block against the code below it as well: a long comment can be wrong, and a wrong one is `important`, not a Nit (#1508: `WriteConsoleReport`'s 27-line doc said failure notices print live while the code printed them after the suite). Group by file: one Nit per file listing its blocks' line ranges, anchored at the largest one, when a file has three or more hits; otherwise one Nit per block. Never stop after the first few hits on a large PR.
 
 Allow brief non-obvious “why” comments, license headers, and corpus `@output` / `@error` / `@panic` markers.
 
 Also allow a comment on a non-corpus unit test that justifies why it is a unit test rather than a corpus test (e.g. the scenario is unreachable from `.bal`). This is a deliberate signal to agents, not review rationale leaking into code — do not flag it as a comment. Still verify its claim case by case (see "Challenge every new Go unit test" above); a wrong justification is a finding.
 
 Report each hit in **Coding issues & nits** (usually `nit`, or `blocking` if it buries real logic) and/or **Unnecessary comments** with file + line range and a short proposed GitHub comment (e.g. delete or shrink to one “why” line).
+
+#### Names
+
+Read the name of every exported function, method, type and field the PR adds (`git diff <base>...HEAD | grep -E '^\+func |^\+type '`) against what its body does and against its neighbours. Raise a Nit with the better name when:
+
+- A word in the name promises behaviour the code doesn't have. `Request`, `Try`, `Schedule` or `Async` on a call that finishes the work before returning; `Get` on a function that creates, loads or mutates; `Is`/`Has` on one with side effects; `Must` on one that never panics. Example (#1508): `Runtime.RequestGracefulStop` runs every stop handler synchronously before returning, so it should be `GracefulStop`. That also matches its neighbours `Init` and `Listen` and Ballerina's own `gracefulStop`.
+- It breaks the receiver's or package's pattern: a `Get` prefix among bare accessors, `Do`/`Handle` filler words, or a different verb for the same operation an existing API already names (`Shutdown` next to `Stop`).
+- It repeats the package or receiver (`testrunner.TestRunnerReport`, `plan.PlanTests`), or uses a jBallerina class name where the Nutcracker concept already has a name.
+- An abbreviation or a generic word (`data`, `info`, `manager`, `util`, `helper`) hides what the value is.
+
+When one name is off, check the PR's other new names in the same package for the same problem (see **Consistency with surrounding code**). Renaming an exported name the PR didn't add is out of scope.
 
 ### 5. Go validation
 
