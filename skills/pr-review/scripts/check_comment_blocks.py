@@ -20,6 +20,9 @@ reported. License headers are skipped.
            "ported from", "mirrors jballerina"); flagged at any length
   HISTORY  the block narrates review or PR history ("review", "previously",
            "moved from", "confirmed against", a P<N> plan); any length
+  TESTREF  production code points at a test or fixture (`corpus/`,
+           `testdata/`, a `_test.go` file, or the name of a Go test function); any length. The test documents the
+           behaviour itself, and the pointer goes stale when the test moves
 
 Output is grouped by file, largest blocks first, with each block's head line
 range and first comment line. Run it over the whole PR diff on every review,
@@ -38,6 +41,8 @@ REFS_RE = re.compile(
 HISTORY_RE = re.compile(
     r"\breview(?:er|ed)?\b|\bpreviously\b|\bmoved from\b|\bconfirmed against\b|\bno longer\b|\bP\d+\b plan|\bused to\b",
     re.I)
+TESTREF_RE = re.compile(r"\bcorpus/|\btestdata/|\w+_test\.go\b")
+TEST_NAME_RE = re.compile(r"\bTest[A-Z]\w*")
 LICENSE_RE = re.compile(r"Copyright \(c\)|licenses this file|www\.apache\.org/licenses")
 
 
@@ -63,6 +68,13 @@ def added_lines(merge_base):
             added[path].add(line)
             line += 1
     return added
+
+
+def test_function_names():
+    """Names of Go test functions defined in _test.go files at HEAD."""
+    out = subprocess.run(["git", "grep", "-h", "-o", "-E", r"^func Test[A-Z][A-Za-z0-9_]*", "HEAD", "--", ":(top)*_test.go"],
+                         capture_output=True, text=True).stdout
+    return {line.split()[-1] for line in out.split("\n") if line.strip()}
 
 
 def blocks(path, added):
@@ -96,6 +108,7 @@ def main():
     except subprocess.CalledProcessError:
         sys.exit(f"check_comment_blocks: no merge-base with {base}; run it inside the PR worktree")
 
+    test_funcs = test_function_names()
     report = collections.defaultdict(list)
     for path, added in sorted(added_lines(merge_base).items()):
         for start, end, count, text, following in blocks(path, added):
@@ -109,6 +122,8 @@ def main():
                 tags.append("REFS")
             if HISTORY_RE.search(joined):
                 tags.append("HISTORY")
+            if TESTREF_RE.search(joined) or any(n in test_funcs for n in TEST_NAME_RE.findall(joined)):
+                tags.append("TESTREF")
             if tags:
                 first = text[0].strip().lstrip("/").strip()
                 report[path].append((count, start, end, tags, first[:70]))
