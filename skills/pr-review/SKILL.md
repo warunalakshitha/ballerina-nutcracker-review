@@ -282,13 +282,15 @@ Per `doc/guides/CODING_STYLE.md`: do not add comments that narrate code or resta
 - Comments that belong in the PR description or a design doc, not in source
 - References to jBallerina internals or parity claims (`mirrors execute.bal#startSuite byte for byte`, `ported from ReportData`, `matches RunTestsTask#…`): the behaviour belongs in a corpus test, and a reader of this code doesn't have the jBallerina source open
 
+Which comments are needed: only exported API needs a doc comment. Never ask for a comment on an unexported function or type whose code is clear, and don't flag a short, accurate one the author chose to write. A comment that is needed but longer than it has to be is a Nit whose suggestion keeps every fact in fewer lines; never suggest deleting a needed comment.
+
 Start with the mechanical pass, then read. Run it over the whole PR diff on every review, re-reviews included, since a block an earlier round skipped is still a finding:
 
 ```bash
 python3 "$TOOLS/skills/pr-review/scripts/check_comment_blocks.py" <base>
 ```
 
-It lists the added `//` blocks of 6 or more lines (`LONG`, or `PKGDOC` for a package doc) and blocks of any length that name jBallerina internals (`REFS`), narrate history (`HISTORY`) or point production code at a test or fixture (`TESTREF`; the Nit is to delete the pointer, not repoint it). A `LONG` block is a Nit unless every line states a contract the signature can't (nil behaviour, call order, concurrency) or a non-obvious why; the suggestion is the one or two lines that remain. A `PKGDOC` is allowed at length but still loses `REFS`/`HISTORY` text. Read each block against the code below it as well: a long comment can be wrong, and a wrong one is `important`, not a Nit (#1508: `WriteConsoleReport`'s 27-line doc said failure notices print live while the code printed them after the suite). Group by file: one Nit per file listing its blocks' line ranges, anchored at the largest one, when a file has three or more hits; otherwise one Nit per block. Never stop after the first few hits on a large PR.
+It lists the added `//` blocks of 6 or more lines (`LONG`, or `PKGDOC` for a package doc) and blocks of any length that name jBallerina internals (`REFS`), narrate history (`HISTORY`) or point production code at a test or fixture (`TESTREF`; the Nit is to delete the pointer, not repoint it). A `LONG` block is a Nit unless every line states a contract the signature can't (nil behaviour, call order, concurrency) or a non-obvious why; the suggestion is the shortest text that keeps what the reader needs. A `PKGDOC` is allowed at length but still loses `REFS`/`HISTORY` text. Read each block against the code below it as well: a long comment can be wrong, and a wrong one is `important`, not a Nit (#1508: `WriteConsoleReport`'s 27-line doc said failure notices print live while the code printed them after the suite). Group by file: one Nit per file listing its blocks' line ranges, anchored at the largest one, when a file has three or more hits; otherwise one Nit per block. Never stop after the first few hits on a large PR.
 
 Allow brief non-obvious “why” comments, license headers, and corpus `@output` / `@error` / `@panic` markers.
 

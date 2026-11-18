@@ -268,9 +268,10 @@ For every non-merge commit on `$MB..HEAD`:
   comment above a new Go unit test that says why a corpus test can't cover it,
   even when it's several lines or names an issue: maintainers want it in code
   as a signal to agents to prefer corpus tests (#1059). The reverse is a Nit: a
-  new unit test with no such justification comment. Match
-  neighbors: similar private functions in a package either all have a one-line
-  doc or none do. After a refactor, re-read every comment in touched functions
+  new unit test with no such justification comment. Only exported API
+  needs a doc: never ask for one on an unexported function whose code is
+  clear, and don't flag a short, accurate one the author wrote. A needed but
+  long comment is shortened, keeping its meaning, never deleted. After a refactor, re-read every comment in touched functions
   for staleness. Flag TODOs without an issue number. Each unnecessary,
   oversized or inaccurate comment on a changed line is its own Nit anchored to
   the comment's lines, with the deletion or the shorter/corrected text as the
