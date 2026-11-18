@@ -285,7 +285,7 @@ Per `doc/guides/CODING_STYLE.md`: do not add comments that narrate code or resta
 - Comments that belong in the PR description or a design doc, not in source
 - References to jBallerina internals or parity claims (`mirrors execute.bal#startSuite byte for byte`, `ported from ReportData`, `matches RunTestsTask#…`): the behaviour belongs in a corpus test, and a reader of this code doesn't have the jBallerina source open
 
-Which comments are needed: only exported API needs a doc comment. Never ask for a comment on an unexported function or type whose code is clear, and don't flag a short, accurate one the author chose to write. A comment that is needed but longer than it has to be is a Nit whose suggestion keeps every fact in fewer lines; never suggest deleting a needed comment.
+Which comments are needed: only exported API needs a doc comment. Never ask for a comment on an unexported function or type whose code is clear, and don't flag a short, accurate one the author chose to write. A comment that is needed but longer than it has to be is a Nit whose suggestion keeps every fact in fewer lines; never suggest deleting a needed comment. A performance or "why" note inside a function body is shortened, not dropped; only function docs keep such notes out. A one-line, accurate jBallerina reference on unexported code (`// chunkLines mirrors AssertionDiffEvaluator#getValueList.`) is not a finding; raise `REFS` only when it is in an exported doc, is longer than a line, or names something not in this repo as if it were.
 
 Start with the mechanical pass, then read. Run it over the whole PR diff on every review, re-reviews included, since a block an earlier round skipped is still a finding:
 
@@ -310,7 +310,7 @@ Read the name of every exported function, method, type and field the PR adds (`g
 - It repeats the package or receiver (`testrunner.TestRunnerReport`, `plan.PlanTests`), or uses a jBallerina class name where the Nutcracker concept already has a name.
 - An abbreviation or a generic word (`data`, `info`, `manager`, `util`, `helper`) hides what the value is.
 
-When one name is off, check the PR's other new names in the same package for the same problem (see **Consistency with surrounding code**). Renaming an exported name the PR didn't add is out of scope.
+Don't raise a rename that only flips polarity (`HasAny` ↔ `IsEmpty`) or swaps one fitting word for another: each rename costs the author every caller, so it must fix a name that misleads or hides what the value is. Renaming an exported name the PR didn't add is out of scope.
 
 ### 5. Go validation
 
