@@ -15,7 +15,7 @@ The user starts a sweep by setting `target` to a skills commit and `status` to `
    - Step 2: the lock check as written, but skip its `state/sweep` check (that pauses hourly rounds, not this one).
    - Replace step 3 ("Did anything change?") with: `ArtifactData get` `state/sweep`. If it is missing or its `status` isn't `running`, stop with one line ("No sweep requested"). Otherwise keep its `version`.
    - Steps 4–5 (take the lock, keep it fresh) as written. The lock's heartbeat must stay fresh for the whole run: refresh it at least every 45 minutes, not only before each send.
-3. **Setup and gate (§3, §4):** unchanged.
+3. **Setup and gate (§3, §4):** unchanged, plus a disk check before any review: the environment keeps its disk between runs and a sweep builds many PRs. If `df -Pk "$HOME"` shows less than 20 GB free, run `go clean -cache` and remove `$SP/wt` worktrees left from an earlier run (`git -C $REPO worktree prune` afterwards); say in the report how much it freed. If still under 10 GB free, stop and report it.
 4. **Pick the PRs:** `cd $TOOLS/skills/pre-pr-review/scripts && TOOLS=$TOOLS python3 sweep_candidates.py <target>` lists the stale PRs, oldest first (`<N> STALE <tools> <merge>`). An `ERR` line is a fetch failure: retry that PR once, then leave it for the next run.
    - If `total` is absent, set `total` = the number of candidates now (first run of this sweep).
    - No candidates: the sweep is done. Set `status` = `done`, `done_at` = now, `left` = 0, write the report (step 7) and release the lock.
