@@ -5,7 +5,10 @@ Usage: python3 sweep_candidates.py <target-skills-commit>
   Run with $TOOLS as the current repo or set TOOLS; the summary marker's `tools=<sha>` is compared with
   the target in that checkout (`git merge-base --is-ancestor`), so it must not be shallow.
 
-Prints one line per candidate, oldest PR first: `<N> STALE <tools sha or none> <MERGEABLE|UNKNOWN>`.
+Prints one line per candidate: first every PR whose head moved since our last summary
+(`<N> MOVED <reviewed sha> -> <head> <merge>`, as scan_prs.py reports it: hourly rounds are paused during a
+sweep, so an author who pushed is reviewed first), then the stale ones, oldest PR first
+(`<N> STALE <tools sha or none> <MERGEABLE|UNKNOWN>`).
 Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head) and
 conflicting PRs, which a review would only report as conflicting. Fetch failures print ERR.
 Exit status 0 with no output means the sweep is done.
@@ -36,6 +39,7 @@ def main():
     target = sys.argv[1]
     if subprocess.run(["git", "-C", TOOLS, "cat-file", "-e", f"{target}^{{commit}}"]).returncode != 0:
         sys.exit(f"sweep_candidates: target {target} is not a commit in {TOOLS}")
+    moved, stale = [], []
     for p in sorted(open_prs(), key=lambda p: p["number"]):
         if p["draft"] or skipped_by_label(p):
             continue
@@ -50,10 +54,16 @@ def main():
             continue
         if merge == "CONFLICTING":
             continue
+        reviewed = re.findall(r"reviewed `([0-9a-f]{7,40})", bodies[-1]) if bodies else []
+        if reviewed and not sha.startswith(reviewed[-1]):
+            moved.append(f"{n} MOVED {reviewed[-1]} -> {sha[:9]} {merge}")
+            continue
         tools = TOOLS_RE.findall(bodies[-1]) if bodies else []
         tools_sha = tools[-1] if tools else None
         if not swept(tools_sha, target):
-            print(n, "STALE", tools_sha or "none", merge)
+            stale.append(f"{n} STALE {tools_sha or 'none'} {merge}")
+    for line in moved + stale:
+        print(line)
 
 
 if __name__ == "__main__":
