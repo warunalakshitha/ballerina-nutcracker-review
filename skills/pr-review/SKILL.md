@@ -144,6 +144,13 @@ For each size, length, count or index the PR reads from a type or input, run the
 - Every guard like `n > 0`, `len(x) >= 1` or `size != -1` is a candidate bug: find what happens to the excluded value (here `0`) and check it against jBallerina. Example (#1422): `rowShapeOf` recorded a closed array's size only when `FixedLength() > 0`, so `int[0]` from `[1]` became an open array of `never` and failed instead of projecting to `[]`.
 - Operator and expression typing: when the PR changes the static type of an operator's or expression's result, also probe nil-lifted operands (`T?`, including one that is `()` at runtime). Per the spec's nil lifting, the result type is the lifted operator's result type plus `()`: check the PR gives that type and not a narrower one (e.g. a singleton carried over from the non-nil operand). A gap the base also has is still in scope when the PR's title, body or linked issue says it fixes this operator's result typing: raise it as a finding, not as out-of-scope.
 
+#### Commands that write files
+
+When the PR adds or changes a CLI command that writes reports, caches, rerun data or other files, a single run from a clean directory isn't enough:
+
+- **State across runs.** Run the command twice in the same project with different selections. Make the second one match nothing (a filter naming no test, an empty group). Check that the second run's output files describe only that run, and compare them with jBallerina's after the same two commands. Example (#1508): `bal test --test-report --tests missing` printed `No tests found` but republished the earlier run's passing test, because the early return left `module_status.json` in place.
+- **Output-location flags.** List every place the command builds an output path (`rg 'TargetDir|filepath.Join'` in the new code). Each one must use the resolved location from flags like `--target-dir`, including flags the command already accepted before the PR. Probe with a non-default value and check that no file lands in the default directory. Example (#1508): `--target-dir` reached the build options, but reports, module status and rerun data were still written under `<project>/target`.
+
 #### Root-cause design checks
 
 Do these before hunting individual bugs. Each one turns a series of per-site findings into one design finding.
