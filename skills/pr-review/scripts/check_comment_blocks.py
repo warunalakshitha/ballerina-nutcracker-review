@@ -36,8 +36,11 @@ import sys
 
 TEST_PARTS = ("_test.go", "/testdata/", "corpus/", "/tests/")
 REFS_RE = re.compile(
-    r"jballerina|\b\w+\.bal#\w+|\b[A-Z]\w+#\w+|byte[- ]for[- ]byte|ported (?:exactly )?from|\bmirror(?:s|ing)\b",
+    r"jballerina|\b\w+\.bal#\w+|byte[- ]for[- ]byte|ported (?:exactly )?from|\bmirror(?:s|ing)\b",
     re.I)
+# A Java `Class#member` reference; case-sensitive so an issue reference such as
+# `ballerina#1383` or `owner/repo#12` (lower-case name, numeric member) doesn't match.
+CLASSREF_RE = re.compile(r"\b[A-Z]\w*#[A-Za-z_]\w*")
 HISTORY_RE = re.compile(
     r"\breview(?:er|ed)?\b|\bpreviously\b|\bmoved from\b|\bconfirmed against\b|\bno longer\b|\bP\d+\b plan|\bused to\b",
     re.I)
@@ -118,7 +121,7 @@ def main():
             tags = []
             if count >= minimum:
                 tags.append("PKGDOC" if following.startswith("package ") else "LONG")
-            if REFS_RE.search(joined):
+            if REFS_RE.search(joined) or CLASSREF_RE.search(joined):
                 tags.append("REFS")
             if HISTORY_RE.search(joined):
                 tags.append("HISTORY")
