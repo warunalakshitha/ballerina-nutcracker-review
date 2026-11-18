@@ -202,7 +202,7 @@ For every non-merge commit on `$MB..HEAD`:
 - Conventional Commits: `python3 .github/scripts/validate_commits.py "<subject>"`.
   Types `feat fix build chore ci docs style refactor perf test revert`; lowercase
   description; ≤ 72 chars. Also check the likely PR title.
-- No `Co-authored-by:` trailer of any kind.
+- No `Co-authored-by:` trailer of any kind, and no AI authorship (Claude, Cursor, Codex, Copilot, …): every commit is the PR author's own. Important, blocks merge.
 - No AI agent as author/committer (`cursor`, `copilot`, `claude`, `anthropic`,
   `openai`, `gemini`, `noreply` bots), no `Generated-by:` / `Assisted-by:`
   trailers, no body claiming AI generation. Report SHA + subject.
