@@ -16,8 +16,11 @@ reported. License headers are skipped.
   PKGDOC   a LONG block that is the package doc (followed by `package`);
            allowed, but still check it for the narration below
   REFS     the block names jBallerina internals or claims parity
-           (`execute.bal#startSuite`, `RunTestsTask#…`, "byte for byte",
-           "ported from", "mirrors jballerina"); flagged at any length
+           (`execute.bal#startSuite`, `RunTestsTask#…`, `CsvUtils.getSkipDataRows`,
+           "byte for byte", "ported from", "mirrors jballerina"); flagged at
+           any length. A `Class.method` name only counts when Class is not a
+           Go type in the repo, a common JDK class (`String.valueOf` is fine)
+           or attributed to a library ("JavaMail's InternetAddress.toString")
   HISTORY  the block narrates review or PR history ("review", "previously",
            "moved from", "confirmed against", a P<N> plan); any length
   TESTREF  production code points at a test or fixture (`corpus/`,
@@ -41,6 +44,14 @@ REFS_RE = re.compile(
 # A Java `Class#member` reference; case-sensitive so an issue reference such as
 # `ballerina#1383` or `owner/repo#12` (lower-case name, numeric member) doesn't match.
 CLASSREF_RE = re.compile(r"\b[A-Z]\w*#[A-Za-z_]\w*")
+# A Java `Class.method` reference: a CamelCase class of two or more words and a lower-case method,
+# e.g. `CsvUtils.getSkipDataRows`; not a file name such as `Foo.java`. Go types and common JDK classes
+# are excluded in java_refs().
+JAVA_METHOD_RE = re.compile(r"\b([A-Z][a-z0-9]+[A-Z]\w*)\.(?!(?:java|toml|bal|go|md|json|ya?ml|xml)\b)[a-z]\w*")
+JDK_CLASSES = {"BigDecimal", "BigInteger", "NumberFormat", "DecimalFormat", "DecimalFormatSymbols",
+               "StringBuilder", "DateTimeFormatter", "LocalDate", "LocalDateTime", "ZonedDateTime",
+               "OffsetDateTime", "ZoneId", "ZoneOffset", "TimeUnit", "ConcurrentHashMap", "MessageDigest", "ByteBuffer", "CharBuffer", "InputStream",
+               "OutputStream", "HashMap", "LinkedHashMap", "ArrayList", "CompletableFuture"}
 HISTORY_RE = re.compile(
     r"\breview(?:er|ed)?\b|\bpreviously\b|\bmoved from\b|\bconfirmed against\b|\bno longer\b|\bP\d+\b plan|\bused to be\b|\bwe used to\b|\bpreviously used\b",
     re.I)
@@ -80,6 +91,24 @@ def test_function_names():
     return {line.split()[-1] for line in out.split("\n") if line.strip()}
 
 
+def go_type_names():
+    """Names of exported Go types declared at HEAD, so a `Type.method` comment on Go code isn't a Java reference."""
+    out = subprocess.run(["git", "grep", "-h", "-E", r"^(type[[:space:]]+|[[:space:]]+)[A-Z][A-Za-z0-9_]*[[:space:]]+(struct|interface)",
+                          "HEAD", "--", ":(top)*.go"], capture_output=True, text=True).stdout
+    out += subprocess.run(["git", "grep", "-h", "-E", r"^type[[:space:]]+[A-Z][A-Za-z0-9_]*", "HEAD", "--", ":(top)*.go"],
+                          capture_output=True, text=True).stdout
+    return {m.group(1) for m in re.finditer(r"^(?:HEAD:)?(?:type\s+|\s+)([A-Z]\w*)", out, re.M)}
+
+
+def java_refs(text, go_types):
+    """Class.method names of unattributed Java code. One introduced with a possessive ("JavaMail's
+    InternetAddress.toString", "Netty's …") names the library the port matches; a jBallerina one is
+    already caught by REFS_RE."""
+    return [m.group(1) for m in JAVA_METHOD_RE.finditer(text)
+            if m.group(1) not in go_types and m.group(1) not in JDK_CLASSES
+            and not re.search(r"\w's\s+$", text[:m.start()])]
+
+
 def blocks(path, added):
     """Yield (start, end, added_count, lines, next_code_line) for comment runs touching added lines."""
     lines = sh("git", "show", f"HEAD:{path}").split("\n")
@@ -112,6 +141,7 @@ def main():
         sys.exit(f"check_comment_blocks: no merge-base with {base}; run it inside the PR worktree")
 
     test_funcs = test_function_names()
+    go_types = go_type_names()
     report = collections.defaultdict(list)
     for path, added in sorted(added_lines(merge_base).items()):
         for start, end, count, text, following in blocks(path, added):
@@ -121,7 +151,7 @@ def main():
             tags = []
             if count >= minimum:
                 tags.append("PKGDOC" if following.startswith("package ") else "LONG")
-            if REFS_RE.search(joined) or CLASSREF_RE.search(joined):
+            if REFS_RE.search(joined) or CLASSREF_RE.search(joined) or java_refs(joined, go_types):
                 tags.append("REFS")
             if HISTORY_RE.search(joined):
                 tags.append("HISTORY")
