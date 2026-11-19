@@ -15,6 +15,8 @@ checking subjects (the Conventional Commits validator) never sees them.
             body line, naming an AI tool ("Generated with Claude Code", …)
   AI-AUTHOR the author or committer name or email matches an AI tool
   NOT-PR-AUTHOR (with --pr) the commit's GitHub author isn't the PR's author
+  PR-BODY   (with --pr) the PR description carries an AI attribution line
+            ("🤖 Generated with [Claude Code]", "Co-authored-by: Copilot", …)
 
 Every hit is Important and blocks merge: each commit must come from the human
 who opened the PR.
@@ -46,6 +48,16 @@ def pr_author_hits(pr, repo="ballerina-nutcracker/ballerina"):
         sha, login, subject = row.split("\t", 2)
         if login != owner:
             hits.append(f"NOT-PR-AUTHOR {sha} {subject}\n          author {login}, PR opened by {owner}")
+    return hits
+
+
+def pr_body_hits(pr, repo="ballerina-nutcracker/ballerina"):
+    """AI attribution lines in the PR description."""
+    body = sh("gh", "api", f"repos/{repo}/pulls/{pr}", "-q", ".body") or ""
+    hits = []
+    for line in body.splitlines():
+        if (GENERATED_RE.search(line) or COAUTHOR_RE.match(line) or AI_TRAILER_RE.match(line)) and AI_RE.search(line):
+            hits.append(f"PR-BODY   #{pr} description\n          {line.strip()[:120]}")
     return hits
 
 
@@ -82,6 +94,7 @@ def main():
             hits.append(f"{tag:<9} {sha} {subject}\n          {detail}")
     if pr:
         hits += pr_author_hits(pr)
+        hits += pr_body_hits(pr)
     if not hits:
         return 0
     print("\n".join(hits))
