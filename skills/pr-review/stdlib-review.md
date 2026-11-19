@@ -4,7 +4,7 @@ Use this in addition to the main checklist when a PR adds or changes a module un
 
 ## 1. Fetch the references
 
-For `ballerina/<name>`, the upstream repo is `ballerina-platform/module-ballerina-<name>` (default branch usually `main`; check with `gh api repos/ballerina-platform/module-ballerina-<name> --jq .default_branch`). Pin the version that matches the jBallerina distribution used for parity, e.g. the tag of the version `bal` pulls from central, and say which one you used.
+For `ballerina/<name>`, the upstream repo is `ballerina-platform/module-ballerina-<name>` (default branch usually `main`; check with `gh api repos/ballerina-platform/module-ballerina-<name> --jq .default_branch`). Pin the version that matches the jBallerina distribution used for parity: the version a fresh project resolves (`bal build` in a new package that imports the module, then read its Dependencies.toml), not the copy bundled with the distribution, which can be an older patch. Say which one you used. When the PR or its README names a newer patch, use the newer of the two, and recheck every Notable Behavioural Changes bullet against that release's changelog: a jBallerina bug that release already fixes is parity, not a defect the port fixes.
 
 ```bash
 M=module-ballerina-<name>
@@ -51,6 +51,7 @@ Confirm each difference with `bal run` (see the main skill's step 10) before rai
 
 - is listed under the package README's **Notable Behavioural Changes** (the checker keeps `doc/library/README.md` in sync) with a real link to an existing or filed issue in `ballerina-platform/ballerina-library` — a missing or placeholder link is a finding;
 - has its corpus `@output` that differs from jBallerina cite that issue in a comment (`$TOOLS/skills/pr-review/scripts/check_stdlib_issue_citations.py <base>` lists linked issues no test of the module cites);
+  compare each fixture with jBallerina call by call: when jBallerina panics or hangs partway through, trap or comment out that line and rerun until every line has run, then check every `@output` that differs, not one cite per issue. A cite comment directly above consecutive lines for the same issue covers all of them. Report gaps as one Nit per fixture file listing its lines and the issue each needs (name the ones that need filing);
 - isn't contradicted by a corpus test that still asserts the buggy jBallerina behaviour.
 
 Check the README side on its own as well, not only for the fixes you found: go through **every** bullet under the package README's Notable Behavioural Changes that the PR adds or edits (all of them for a new package). Each bullet that describes a jBallerina defect the port fixes, as opposed to an architectural Go constraint, needs a `ballerina-platform/ballerina-library` issue link (`stdlib-readme-format` checklist). List the unlinked bullets by title in one finding on the README.
