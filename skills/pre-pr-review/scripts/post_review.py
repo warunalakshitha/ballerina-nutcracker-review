@@ -11,8 +11,10 @@ What gets posted:
   * each finding anchored to a changed line → one inline comment (one review);
     a line outside the diff falls back to a file-level comment, a file outside
     the diff to the summary
-  * one short summary comment, edited in place on every run (a legacy
-    "# Review report — #N" comment is replaced by it)
+  * one short summary comment, always the PR's last comment: each run posts it
+    anew and deletes every earlier one (a legacy "# Review report — #N" comment
+    is replaced the same way); it is left alone only when unchanged and nothing
+    has been posted on the PR since
   * earlier agent comments whose finding is gone → reply + resolve thread
     (the reply names the fixing PR when the finding's id is in
     stack.fixed_later)
@@ -428,7 +430,7 @@ def main():
             plan["resolve"].append(c)
 
     issue_comments = paged(f"{base}/issues/{num}/comments")
-    # Edit the most recently updated summary; older duplicates (e.g. from another session) are left alone.
+    # The most recently updated summary carries state forward; all earlier summaries are deleted on post.
     summaries = [c for c in issue_comments if c["user"]["login"] == me and (
         c["body"].startswith("<!-- pre-pr-review:summary") or c["body"].startswith(LEGACY_SUMMARY_PREFIX + str(num)))]
     old_summary = max(summaries, key=lambda c: c["updated_at"], default=None)
@@ -491,15 +493,29 @@ def main():
     for f in plan["new_file"]:
         gh(f"{base}/pulls/{num}/comments", payload={
             "commit_id": commit, "path": f["path"], "subject_type": "file", "body": bodies[f["id"]]})
-    if old_summary and old_summary["body"] == summary:
+    # The summary is kept as the PR's last comment so authors see it: post it anew, then drop the old one.
+    if summary_is_last(old_summary, summary, plan, issue_comments, review_comments, base, num):
         res = old_summary
-    elif old_summary:
-        res = gh(f"{base}/issues/comments/{old_summary['id']}", "-X", "PATCH", payload={"body": summary})
     else:
         res = gh(f"{base}/issues/{num}/comments", payload={"body": summary})
+    # Every earlier summary goes, including duplicates left by another session.
+    for c in summaries:
+        if c["id"] != res["id"]:
+            gh(f"{base}/issues/comments/{c['id']}", "-X", "DELETE")
     print(f"Summary: {res['html_url']}")
     print(f"Posted: {len(plan['new_line'])} inline, {len(plan['new_file'])} file-level, "
           f"{len(plan['update'])} updated, {len(plan['resolve'])} resolved")
+
+
+def summary_is_last(old_summary, summary, plan, issue_comments, review_comments, base, num):
+    """An unchanged summary that is still the newest thing on the PR is left alone (no notification)."""
+    if not old_summary or old_summary["body"] != summary or plan["new_line"] or plan["new_file"] or plan["resolve"]:
+        return False
+    since = old_summary["created_at"]
+    reviews = paged(f"{base}/pulls/{num}/reviews")
+    return not any(c["id"] != old_summary["id"] and c["created_at"] > since for c in issue_comments) and \
+        not any(c["created_at"] > since for c in review_comments) and \
+        not any((r.get("submitted_at") or "") > since for r in reviews)
 
 
 def write_preview(out, data, placed, bodies, plan, summary, old_summary, warnings, head, fixed_by):
@@ -508,7 +524,8 @@ def write_preview(out, data, placed, bodies, plan, summary, old_summary, warning
     parts = [f"<!-- Dry-run preview for PR #{data['pr']} at {head[:9]}. Not posted. -->", ""]
     if warnings:
         parts += ["## Warnings", *[f"- {w}" for w in warnings], ""]
-    state = "new" if not old_summary else "unchanged" if old_summary["body"] == summary else f"update {old_summary['id']}"
+    state = ("new" if not old_summary else f"unchanged; kept if still the last comment, else reposted and old summaries deleted"
+             if old_summary["body"] == summary else "reposted as last comment, old summaries deleted")
     parts += [f"## Summary comment ({state})", "", summary]
     for f, where in placed:
         if where == "pr":

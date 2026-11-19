@@ -102,5 +102,7 @@ Run the review again, rewrite `findings.json`, dry-run, post. The script:
   thread has an agent reply starting "🤖 Withdrawn" (reply that way, by hand,
   when withdrawing a wrong finding, then drop it from `findings.json`);
 - posts new findings in one new review;
-- edits the one summary comment in place, replacing a legacy
-  `# Review report — #N` comment the first time.
+- keeps the one summary comment as the PR's last comment: it posts the new
+  summary and deletes every earlier one, duplicates included (and any legacy `# Review report — #N`
+  comment), so authors don't miss it under newer activity. It is left alone
+  only when unchanged and nothing has been posted on the PR since.
