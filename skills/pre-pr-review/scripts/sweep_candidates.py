@@ -9,8 +9,9 @@ Prints one line per candidate: first every PR whose head moved since our last su
 (`<N> MOVED <reviewed sha> -> <head> <merge>`, as scan_prs.py reports it: hourly rounds are paused during a
 sweep, so an author who pushed is reviewed first), then the stale ones, oldest PR first
 (`<N> STALE <tools sha or none> <MERGEABLE|UNKNOWN>`).
-Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head) and
-conflicting PRs, which a review would only report as conflicting. Fetch failures print ERR.
+Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head),
+conflicting PRs, which a review would only report as conflicting, and PRs in the merge queue, which are
+about to land. Fetch failures print ERR.
 Exit status 0 with no output means the sweep is done.
 """
 import os
@@ -18,7 +19,7 @@ import re
 import subprocess
 import sys
 
-from ghrest import GhError, mergeability, open_prs, pr_detail, review_decision, skipped_by_label, summaries
+from ghrest import GhError, merge_queue, mergeability, open_prs, pr_detail, review_decision, skipped_by_label, summaries
 
 TOOLS = os.environ.get("TOOLS", ".")
 TOOLS_RE = re.compile(r"<!-- pre-pr-review:summary [^>]*\btools=([0-9a-f]{7,40})")
@@ -40,8 +41,13 @@ def main():
     if subprocess.run(["git", "-C", TOOLS, "cat-file", "-e", f"{target}^{{commit}}"]).returncode != 0:
         sys.exit(f"sweep_candidates: target {target} is not a commit in {TOOLS}")
     moved, stale = [], []
-    for p in sorted(open_prs(), key=lambda p: p["number"]):
-        if p["draft"] or skipped_by_label(p):
+    prs = open_prs()
+    queued = merge_queue({p["number"] for p in prs})
+    if queued is None:
+        print("sweep_candidates: merge queue unreadable, not skipping queued PRs", file=sys.stderr)
+        queued = {}
+    for p in sorted(prs, key=lambda p: p["number"]):
+        if p["draft"] or skipped_by_label(p) or p["number"] in queued:
             continue
         n, sha = p["number"], p["head"]["sha"]
         try:
