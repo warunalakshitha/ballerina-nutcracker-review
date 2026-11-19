@@ -9,7 +9,8 @@ For each package README under lib/stdlibs/ballerina/ that the PR adds or changes
 port fixes. stdlib-review.md asks that the corpus `@output` showing the fixed behaviour cite that issue in a
 comment. The corpus tests of a module are the `.bal` files under corpus/ that import it and the `_test.go` files
 under corpus/ whose name contains the module name (e.g. corpus/extern/tcp_client_test.go). A citation is
-`ballerina-library#N`, an issue URL, or a bare `#N` on a line that mentions jBallerina (common in Go-embedded tests).
+`ballerina-library#N`, an issue URL, or a bare `#N` on a line that mentions jBallerina or cites another
+ballerina-library issue (e.g. `ballerina-library#9663, #9667`; common in Go-embedded tests).
 
   UNCITED   <README>: #<issue> (<bullet title>)   no corpus test importing the module mentions the issue
   NOLINK    <README>: (<bullet title>)            a Notable Behavioural Changes bullet the PR adds that links no
@@ -39,7 +40,8 @@ def notable_bullets(text):
 def cited(issue, text):
     if re.search(rf"ballerina-library(?:#|/issues/){issue}\b", text):
         return True
-    return any("jballerina" in line.lower() for line in re.findall(rf"^.*(?<![\w/])#{issue}\b.*$", text, re.M))
+    lines = re.findall(rf"^.*(?<![\w/])#{issue}\b.*$", text, re.M)
+    return any("jballerina" in line.lower() or ISSUE.search(line) for line in lines)
 
 
 def main():
