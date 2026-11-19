@@ -329,7 +329,7 @@ Record failures as blocking issues with command + excerpt.
 
 #### Data races
 
-`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel within a module, stages 5–8 and 10 running concurrently across modules (stages 1–4 run in dependency order, and 9 and 11 start after package-wide barriers; `AGENTS.md`; once #985 is on main, stages 1–2 also run concurrently across modules and stage 10 is pipelined with stage 11 per module), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
+`-race` only reports races the tests actually execute, so also read the diff for shared state that can be touched concurrently. Concurrency in this codebase comes from: files parsed in parallel within a module, stages 5–8 and 10 running concurrently across modules (stages 1–4 run in dependency order, and 9 and 11 start after package-wide barriers; `AGENTS.md`; once #985 is on main, AST building (stage 2) also runs concurrently across modules (root-package files are parsed during package resolution, before stage 1) and stage 10 is pipelined with stage 11 per module), parallel tests (`t.Parallel()`, parallel corpus drivers), and at runtime strands (`start`, workers, listeners, PAL callbacks).
 
 Flag, with the two concurrent paths named:
 
@@ -415,7 +415,7 @@ Re-run this check on every re-review, even when the skip list is unchanged: issu
 
 **CI workflow and script PRs.** For a PR that adds or changes `.github/workflows/*.yml`, run `actionlint` (v1.7.12, with shellcheck) locally and raise its hits. Once #1623 is on main (the `actionlint` CI check), don't raise what it reports. When code parses output from commands that can run at the same time into one stream (check what each invoked command does internally, even if the PR doesn't change it: parallel builds, job pools, background `&` jobs, a runner that starts several processes at once), it must not assign a line to a command, package or test by its position or by the last header seen. Ask for separate output per command or lines that identify their source (prefixed lines, or a structured per-event format that carries the source).
 
-**Release scripts.** For a PR touching `.github/scripts/*release*` or `.github/workflows/*release*.yml`, run every `.github/scripts/test_*release*.py` (none on main until #1624). Check that no two jobs or branches (`main`, `release-X.Y.x`) can create the same tag.
+**Release scripts.** For a PR touching `.github/scripts/*release*` or `.github/workflows/*release*.yml`, run every `.github/scripts/test_*release*.py` (none on main until #1624; once it is, native-ci's Ubuntu job runs them, so a local run only cross-checks CI). Check that no two jobs or branches (`main`, `release-X.Y.x`) can create the same tag.
 
 **Generated-file headers.** Before flagging a hand edit to a file whose header says `Code generated ... DO NOT EDIT`, find its generator (`//go:generate`, Makefile targets, `scripts/`, `.github/scripts/`). If it exists, the hand edit is the finding. If it no longer exists in the repo, the edit is fine and the Nit is the stale header: golangci-lint and reviewers skip files with that header, so hand-maintained code there goes unlinted (#1536).
 
