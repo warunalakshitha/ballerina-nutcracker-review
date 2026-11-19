@@ -12,6 +12,9 @@ under corpus/ whose name contains the module name (e.g. corpus/extern/tcp_client
 `ballerina-library#N`, an issue URL, or a bare `#N` on a line that mentions jBallerina (common in Go-embedded tests).
 
   UNCITED   <README>: #<issue> (<bullet title>)   no corpus test importing the module mentions the issue
+  NOLINK    <README>: (<bullet title>)            a Notable Behavioural Changes bullet the PR adds that links no
+                                                  ballerina-library issue; if it describes a jBallerina defect the
+                                                  port fixes, it needs one (file it if none exists)
 
 Read each hit: the fix may have no test at all (a different finding), or its test may cite the issue in a Go test
 outside corpus/. Report the rest as one Nit listing the issues. Exit status 1 when anything is reported.
@@ -52,8 +55,15 @@ def main():
         tests += [f for f in git("ls-tree", "-r", "--name-only", "HEAD", "corpus").split()
                   if f.endswith("_test.go") and name in f.rsplit("/", 1)[-1]]
         text = "\n".join(git("show", f"HEAD:{t}") for t in tests)
+        try:
+            old = set(notable_bullets(git("show", f"{base}:{readme}")))
+        except subprocess.CalledProcessError:
+            old = set()
         for bullet in notable_bullets(git("show", f"HEAD:{readme}")):
             title = re.match(r"\*\*(.+?)\*\*", bullet)
+            if bullet not in old and not ISSUE.search(bullet):
+                found += 1
+                print(f"NOLINK    {readme}: ({title.group(1) if title else bullet[:60]})")
             for issue in dict.fromkeys(ISSUE.findall(bullet)):
                 if not cited(issue, text):
                     found += 1
