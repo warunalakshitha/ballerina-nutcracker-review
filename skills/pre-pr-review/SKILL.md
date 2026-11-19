@@ -445,6 +445,7 @@ decision is the reviewer's:
 - Disabled or skipped tests (new entries in `test_util/skip.go`, `t.Skip`,
   commented-out cases) — each needs an issue link; report ones without.
 - Unrelated changes and public API changes not mentioned in `INTENT.md`.
+  Small drive-by fixes and code/comment improvements are fine; don't list them.
 - Performance: if the change touches `runtime/`, `values/`, `semtypes/` or the
   interpreter loop, run the corpus benchmarks against `origin/main`
   (`corpus/bench`, same runner as the CI benchmark workflow) and report any
