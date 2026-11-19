@@ -3,6 +3,7 @@
 PR review tooling for [ballerina-nutcracker/ballerina](https://github.com/ballerina-nutcracker/ballerina): the review skills and scripts. Review rounds run in Claude Code cloud sessions and never commit here; skill fixes are made locally and pushed here.
 
 - `skills/pr-review/`: the review checklist (`SKILL.md`) and companion checklists (stdlib, LS, workflow).
+- `skills/playground-review/`: manual reviews of [ballerina-nutcracker/playground](https://github.com/ballerina-nutcracker/playground) PRs (architecture, design system, UX, WASM parity, examples, tests), with the design reference and lessons from past reviews. Not part of the rounds; ask for it with a playground PR link.
 - `skills/pre-pr-review/`: agent rules (`references/agent-instructions.md`), the round procedure (`references/routine.md`), the cloud setup (`references/cloud-round.md`), the posting format (`references/github-posting.md`), the retrospective (`references/retrospective.md`) and scripts.
 
 ## How rounds run
