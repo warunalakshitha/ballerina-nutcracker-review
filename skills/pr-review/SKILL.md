@@ -236,7 +236,6 @@ Separate **design/blocking** findings from **nits**.
 Not findings:
 
 - **Process-doc additions by maintainers.** A maintainer adding a review criterion or rule to `AGENTS.md` or `.agents/skills/**` alongside a feature is deliberate process work, not unrelated scope. Check that the text is accurate; don't ask for a separate PR (#978).
-- **Small drive-by improvements.** A minor fix or code/comment improvement in a file the PR otherwise doesn't need (a typo, a clearer or corrected comment, a small tidy-up) is fine, not unrelated scope. Don't ask the author to restore main's text or move it to another PR or commit, and don't raise it as, or cite it as evidence of, a commit mixing unrelated changes (step 3). Review it like any other change: raise it only if it is wrong. Larger unrelated changes (new behaviour, refactors, a different feature) are still flagged under step 6.
 - **Deliberately conservative restrictions.** A rejection or unsupported path that a nearby code comment explains, and whose root cause is an open tracked issue, is a known limitation, not a defect, e.g. rejecting a worker reference in a join collection because joins are lowered per frame (#1047). Raise it only if the explanation is wrong, or if the restriction is user-visible and `doc/lang/subset10.md` doesn't mention it.
 - **Spec-shaped code.** Code whose structure and variable names follow a spec algorithm or rule step by step is not a readability or simplification Nit, even if a shorter form exists (#1201). Raise it only if it deviates from the spec text.
 - **Explicit case lists.** Don't suggest replacing an explicit list of enum or sum-type cases in a `switch` with `default:`. Listing every case is deliberate, so a new value forces a decision at each switch (#1609). Don't raise a missing case in a switch over a `//sumtype:decl` type when the module's config enables `gochecksumtype`: the linter fails it.
@@ -363,7 +362,7 @@ Flag:
 - Dead code, unused exports, unreachable branches introduced or left by the PR
 - Scratch / temp files (`_*.bal`, debug dumps, local notes)
 - Duplicative corpus tests or goldens that add no coverage (see below)
-- Files unrelated to the PR purpose, except small drive-by fixes and code/comment improvements (see **Not findings**)
+- Files unrelated to the PR purpose
 - Orphaned helpers only referenced from deleted call sites
 - Tests for CI scripts that nothing runs: `scripts/check_ci_wiring.py <base>` lists added `.github/scripts/test_*` files no workflow, Makefile or hook names
 
