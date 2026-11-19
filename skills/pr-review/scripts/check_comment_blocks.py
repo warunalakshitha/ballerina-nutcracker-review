@@ -42,7 +42,7 @@ REFS_RE = re.compile(
 # `ballerina#1383` or `owner/repo#12` (lower-case name, numeric member) doesn't match.
 CLASSREF_RE = re.compile(r"\b[A-Z]\w*#[A-Za-z_]\w*")
 HISTORY_RE = re.compile(
-    r"\breview(?:er|ed)?\b|\bpreviously\b|\bmoved from\b|\bconfirmed against\b|\bno longer\b|\bP\d+\b plan|\bused to\b",
+    r"\breview(?:er|ed)?\b|\bpreviously\b|\bmoved from\b|\bconfirmed against\b|\bno longer\b|\bP\d+\b plan|\bused to be\b|\bwe used to\b|\bpreviously used\b",
     re.I)
 TESTREF_RE = re.compile(r"\bcorpus/|\btestdata/|\w+_test\.go\b")
 TEST_NAME_RE = re.compile(r"\bTest[A-Z]\w*")
