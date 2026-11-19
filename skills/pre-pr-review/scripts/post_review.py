@@ -44,6 +44,7 @@ SEVERITY_LABEL = {"important": "Important", "verify": "Verify", "nit": "Nit"}
 SEVERITY_BADGE = {"important": "🔴", "verify": "🟡", "nit": "🔵"}
 MAX_TITLE, MAX_BODY, MAX_SENTENCES = 80, 400, 3
 MAX_SUMMARY_LINE, MAX_ITEMS, MAX_ITEM = 160, 5, 140
+MAX_FIX = 60
 MAX_CHECKED, MAX_CHECK = 4, 40
 OVERLAP_LINES = 3
 
@@ -212,9 +213,12 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     items += [f"✅ Fixed later in the stack by #{f['pr']}: {f['text']}" for f in (stack or {}).get("fixed_later", [])]
     for f, where in placed:
         if where == "pr":
-            loc = f" (`{f['path']}:{f['line']}` isn't in the diff)" if f.get("path") and f.get("line") else ""
-            items.append(f"{SEVERITY_BADGE[f['severity']]} **{SEVERITY_LABEL[f['severity']]}** · {f['title']} — {f['body'].strip()}{loc}"
-                         f" {FINDING_MARKER.format(f['id'])}")
+            loc = f" · `{f['path']}:{f['line']}`" if f.get("path") and f.get("line") else ""
+            fix = f" **Fix:** {f['fix'].strip()}" if f.get("fix", "").strip() else ""
+            # Title, fix and location are the line authors read; the evidence folds away under it.
+            items.append(f"{SEVERITY_BADGE[f['severity']]} **{SEVERITY_LABEL[f['severity']]}** · {f['title'].rstrip('.')}.{fix}{loc}"
+                         f" {FINDING_MARKER.format(f['id'])}\n  <details><summary>Details</summary>\n\n  "
+                         + f["body"].strip().replace("\n", "\n  ") + "\n  </details>")
     if items:
         lines.append("")
         lines += [f"- {i}" for i in items]
@@ -234,6 +238,8 @@ def brevity_warnings(data):
     warn += [f"checked entry is {len(c)} chars (max {MAX_CHECK}): {c}" for c in s.get("checked", []) if len(c) > MAX_CHECK]
     for f in data["findings"]:
         fid = f["id"]
+        if len(f.get("fix", "")) > MAX_FIX:
+            warn.append(f"{fid}: fix is {len(f['fix'])} chars (max {MAX_FIX})")
         if len(f["title"]) > MAX_TITLE:
             warn.append(f"{fid}: title is {len(f['title'])} chars (max {MAX_TITLE})")
         body = f["body"].strip()

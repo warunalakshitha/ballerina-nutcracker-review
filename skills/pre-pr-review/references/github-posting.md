@@ -11,7 +11,7 @@ file says what to put in `findings.json` and how to write it.
 | Nit, including unnecessary, oversized or inaccurate new comments (not unit-test justification comments) | inline comment with a `suggestion` (empty string = delete the lines) |
 | Concern about a whole changed file | file-level comment (`"anchor": "file"`) |
 | Missing code (e.g. a test the fix needs) | inline on the changed line it belongs to, code in `code` |
-| Commit type/message, PR title or body problems (e.g. missing `Closes #N`) | a finding with `"anchor": "pr"` (no `path`): counted in the status line and rendered with its badge in the summary — never a plain `summary.items` bullet, and never a file comment on an unrelated file |
+| Commit type/message, PR title or body problems (e.g. missing `Closes #N`) | a finding with `"anchor": "pr"` (no `path`): counted in the status line and rendered in the summary as its badge and plain-English title, body folded — never a plain `summary.items` bullet, and never a file comment on an unrelated file |
 | Missing subset doc or other code gap | a finding anchored on the implementing file/line (inline or `"anchor": "file"`) |
 | Informational PR-wide notes only (merge conflicts, perf numbers, `Read line by line`) | `summary.items` |
 
@@ -45,6 +45,19 @@ five seconds and act on without scrolling.
   the author applies it with one click.
 - **Outputs**: compiler output only, one line per compiler, trimmed to the
   lines that show the difference. They render collapsed.
+- **Plain words in the summary**: a PR-level finding shows in the summary as
+  one line, its badge, `title`, `fix` and (when it has a `path`) `file:line`;
+  the body folds under "Details". That line is the whole message most authors
+  read, so write `title` (the problem) in simple English, without SHAs, script
+  names or rule numbers, and add an optional `fix` (what to do, ≤ 60 chars)
+  when it isn't obvious from the title. Findings on code lines are inline
+  comments with their own details and suggestion, not summary lines. Good:
+  `Blocks merge: commit messages have Co-Authored-By: Claude, no AI authors.
+  Fix: reword the commits to drop it.` Bad: `Blocks merge: 75154b7 and 27a9d46
+  have a Co-Authored-By: Claude trailer`. Give `path` and `line` when the
+  finding is about code outside the diff, so the line shows where. Write
+  `summary.line` and `summary.items` the same way: short, common words, one
+  idea each.
 - **Summary**: a `## 🤖 PR review summary · #N` heading, then one status line
   computed by the script — counts, fixed-since-last-run count and the reviewed
   commit (`1 Important · reviewed <sha>.`; `0 findings ✅ (2 fixed)` once
@@ -82,6 +95,7 @@ Never inside the repo checkout: keep it in a temp/scratch directory. Shape: see
 | `code` | `{ "lang": "ballerina", "text": "…" }` or `null` |
 | `outputs` | `{ "jBallerina": "…", "Nutcracker": "…" }` or `null` |
 | `suggestion` | replacement text for `start_line..line`, `""` to delete, `null` for none |
+| `fix` | optional, PR-level findings: what to do in a few plain words (≤ 60 chars), shown as **Fix:** after the title in the summary |
 | `suggestion_lang` | optional language of a suggestion posted as a fenced block (file/PR-level findings); default `ballerina` |
 | `summary.line` | optional sentence; only when it adds something the inline comments don't |
 | `summary.items` | PR-level notes with no line to attach to. Never echo other reviewers' threads here; the script adds `CodeRabbit: <n> of <m> threads unresolved.` from the live thread state |

@@ -55,6 +55,18 @@
         "Nutcracker": "error[SEMANTIC_ERROR] 29:9 incompatible arguments for function call"
       },
       "suggestion": "    public isolated function next() returns record {|int value;|}|error {"
+    },
+    {
+      "id": "pr-ai-coauthor",
+      "severity": "important",
+      "kind": "Commit",
+      "anchor": "pr",
+      "title": "Blocks merge: commit messages have Co-Authored-By: Claude, no AI authors",
+      "fix": "reword the commits to drop it.",
+      "body": "Read: two commits end with `Co-Authored-By: Claude` (`check_commit_trailers.py`). Every commit must come from the PR author.",
+      "code": null,
+      "outputs": null,
+      "suggestion": null
     }
   ]
 }
