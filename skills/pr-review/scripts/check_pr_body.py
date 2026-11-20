@@ -12,7 +12,7 @@ template when it changes. Reported, one line each:
   PLACEHOLDER the `Fixes #<Issue Number>` line left as is
   NO-ISSUE    no closing keyword (Fixes/Closes/Resolves #N), no non-closing link (Part of/Related to/Refs #N) and no
               line saying why there's no issue
-  CHECKBOX    a ticked checklist item the diff doesn't match: corpus tests ticked but no corpus file added or
+  CHECKBOX    a ticked checklist item the diff doesn't match: corpus tests ticked but no corpus or ls/corpus file added or
               changed; the subset doc ticked but no doc/lang/subset<N>.md or doc/library/subset<N>.md change
   CLOSED      a closing keyword (Fixes/Closes/Resolves, with or without a colon) names an issue of this repo that
               is already closed, so the PR fixes nothing it claims to
@@ -129,8 +129,8 @@ def main():
         problems.append(f"PATH        `{token}` is named in the body but the PR doesn't add or change it{what}")
     ticked = [l for l in body.splitlines() if re.match(r"\s*[-*]\s*\[[xX]\]", l)]
     if ticked:
-        if any("corpus test" in l.lower() for l in ticked) and not any(f.startswith("corpus/") for f in files):
-            problems.append("CHECKBOX    corpus tests ticked, but the PR adds or changes no file under corpus/")
+        if any("corpus test" in l.lower() for l in ticked) and not any(f.startswith(("corpus/", "ls/corpus/")) for f in files):
+            problems.append("CHECKBOX    corpus tests ticked, but the PR adds or changes no file under corpus/ or ls/corpus/")
         if any("subset" in l.lower() for l in ticked) and not any(re.match(r"doc/(lang|library)/subset\d+\.md$", f) for f in files):
             problems.append("CHECKBOX    subset doc ticked, but the PR doesn't change doc/lang/subset<N>.md or doc/library/subset<N>.md")
     for p in problems:
