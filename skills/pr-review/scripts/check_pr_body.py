@@ -21,6 +21,8 @@ template when it changes. Reported, one line each:
               (`foo-v`, `foo-e`, `foo-p`, `foo-fv`, ...) that no file the PR adds or changes is named after; read
               each hit, since a body may also point at an unchanged file on purpose
 
+CodeRabbit's auto-generated release-notes block is left out of every check: the author didn't write it.
+
 Report everything as one PR-level Nit listing the problems, not one finding each. Exit status 1 when anything is
 reported, 0 when the body matches the template.
 """
@@ -40,6 +42,8 @@ FILE_EXT = re.compile(r"\.(go|bal|md|txt|txtar|toml|ya?ml|py|sh|json|mod)$")
 SUBSET_DOC_ITEM = re.compile(r"doc/(lang|library)/subset|subset<n>\.md|subset doc", re.I)
 # A corpus fixture named by its stem, e.g. `start-action-cast-v` for corpus/bal/.../start-action-cast-v.bal.
 FIXTURE_STEM = re.compile(r"^[a-z0-9][a-z0-9_-]*-f?[vep]$")
+CODERABBIT_BLOCK = re.compile(r"<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->.*?"
+                              r"(<!-- end of auto-generated comment: release notes by coderabbit\.ai -->|\Z)", re.S)
 NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b"
                       r"|\b(part of|related to|relates to|refs?|see|follow-up (to|of))\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
 
@@ -78,7 +82,7 @@ def main():
         return 2
     n, repo = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "ballerina-nutcracker/ballerina"
     pr = api(f"repos/{repo}/pulls/{n}")
-    body = pr.get("body") or ""
+    body = CODERABBIT_BLOCK.sub("", pr.get("body") or "")
     tpl = api(f"repos/{repo}/contents/.github/pull_request_template.md?ref={pr['base']['repo']['default_branch']}")
     template = base64.b64decode(tpl["content"]).decode()
     want, got = sections(template), sections(body)
