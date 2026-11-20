@@ -12,9 +12,9 @@ A PR can merge when all of these hold:
   since a merge-commit or rebase merge lands the commits as they are
 - none of our finding threads is unresolved
 Findings the summary still lists count as closed when the author has replied to every one; the PR's row in
-Can merge or Cannot merge says how many, for a manual check. A "👤 For a human" item in our summary (a decline the
-reviewer still doubts) doesn't block merging; the
-For a human table lists them for a manual check, but only for PRs with no open findings left.
+Can merge or Cannot merge says how many, for a manual check. A "👤 For a human" item in our summary (an author's
+answer to one of our findings, linked) doesn't block merging; the For a human table lists every one, whatever the
+PR's state, until the reviewer reacts 👍 to the answer and the next round drops it.
 
 REST only (works in Claude Code cloud sessions). A PR whose data can't be fetched is listed
 under "Could not check".
@@ -73,12 +73,8 @@ def stack_blocker(p, by_head):
 
 
 def human_checks(p):
-    """'👤 For a human' items in our summary at the PR's current head (declines we still doubt)."""
-    bodies = summaries(p["number"])
-    body = bodies[-1] if bodies else ""
-    shas = re.findall(r"reviewed `([0-9a-f]{7,40})", body)
-    if not shas or not p["head"]["sha"].startswith(shas[-1]):
-        return []
+    """'👤 For a human' items in our latest summary (authors' answers to check), even if the PR moved since."""
+    body = latest_summary(p["number"])
     return [line.split("·", 1)[1].strip() for line in body.splitlines() if line.startswith("- 👤 **For a human** ·")]
 
 
@@ -195,8 +191,7 @@ def main():
         except GhError:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
-        # Only once every finding is closed: while one is open, the author has work to do first.
-        if checks and not (why and why.startswith("open findings")):
+        if checks:
             humans.append((p, checks))
         note = f" ({answered} answered by the author, check by hand)" if answered else ""
         if not why or waits:
@@ -228,6 +223,7 @@ def main():
     print(f"| ↳ after CI | {len(mergeable) - ready - in_queue} |")
     print(f"| Cannot merge | {len(blocked)} |")
     print(f"| Removed from merge queue | {len(removed)} |")
+    print(f"| For a human (answers to check) | {sum(len(h) for _, h in humans)} |")
     print(f"| Drafts | {sum(1 for _, w in parked if w == 'draft')} |")
     print(f"| Held by label (don't-merge/dnm/hold/wip) | {sum(1 for _, w in parked if w != 'draft')} |\n")
     print(f"## Can merge ({len(mergeable)})\n")
@@ -253,7 +249,8 @@ def main():
 
     if humans:
         print(f"\n## For a human ({len(humans)})\n")
-        print("The author declined or answered these and the reviewer still doubts the answer. They don't block merging; check them by hand.\n")
+        print("Authors' answers to our findings (declined, explained, or resolved without a change). They don't block merging. "
+              "Check each one and react 👍 to the linked answer; the next review round drops it.\n")
         print("| PR | Title | Author | Check |")
         print("|---|---|---|---|")
         for p, items in humans:

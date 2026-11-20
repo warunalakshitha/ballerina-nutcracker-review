@@ -40,6 +40,10 @@ FINDING_ID_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
 ANSWERED_MARKER = "<!-- pre-pr-review:answered ids={} -->"
 ANSWERED_RE = re.compile(r"<!-- pre-pr-review:answered ids=(\S+) -->")
 LEGACY_SUMMARY_PREFIX = "# Review report — #"
+HUMAN_LINE_RE = re.compile(r"^- 👤 \*\*For a human\*\* · (.*)$", re.M)
+# A human line links the author's answer (a thread reply, a PR comment, or our finding comment when the author
+# resolved it without replying); the reviewer reacts 👍 to that comment once checked.
+ANSWER_URL_RE = re.compile(r"https://github\.com/[^\s)]+/pull/\d+#(discussion_r|issuecomment-)(\d+)")
 # "commit": commit history, PR title or PR body (squash, reword, rebase): not a code finding, so it doesn't keep
 # a PR off ready_table.py's Can merge table; the row warns to fix it before merging instead.
 SEVERITY_LABEL = {"important": "Important", "verify": "Verify", "nit": "Nit", "commit": "Commit/PR"}
@@ -182,8 +186,11 @@ def skill_commit(data):
 
 def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered=0):
     counts = {s: sum(1 for f in data["findings"] if f["severity"] == s) for s in SEVERITY_LABEL}
+    # Commit/PR items aren't findings: with only those left the PR reads "0 findings", and they follow the count.
     count_text = " · ".join(f"{SEVERITY_BADGE[s]} **{n} {SEVERITY_LABEL[s]}{'s' if n > 1 and s == 'nit' else ''}**"
-                            for s, n in counts.items() if n) or "0 findings ✅"
+                            for s, n in counts.items() if n and s != "commit") or "0 findings ✅"
+    if counts["commit"]:
+        count_text += f" · {SEVERITY_BADGE['commit']} **{counts['commit']} {SEVERITY_LABEL['commit']}** to fix before merge"
     tally = [f"{n} {word}" for n, word in ((fixed, "fixed"), (answered, "answered"), (withdrawn, "withdrawn")) if n]
     if tally:
         count_text += f" ({', '.join(tally)})"
@@ -335,6 +342,39 @@ def body_warnings(data, repo, num, placed):
             "(SKILL.md step 3.6), unless the author already answered it"]
 
 
+def answer_key(line):
+    m = ANSWER_URL_RE.search(line)
+    return (m.group(1), m.group(2)) if m else None
+
+
+def checked_by(base, me, key):
+    """True when `me` reacted 👍 to the answer comment: the reviewer has checked it."""
+    kind, cid = key
+    route = f"{base}/pulls/comments/{cid}/reactions" if kind == "discussion_r" else f"{base}/issues/comments/{cid}/reactions"
+    try:
+        return any(r["user"]["login"] == me and r["content"] == "+1" for r in paged(route))
+    except SystemExit:
+        return False  # the comment is gone: keep the line for a human to look at
+
+
+def merge_human(data, old_summary, base, me):
+    """Carry earlier For-a-human lines forward until the reviewer 👍s their answer; return the checked ones.
+    A new line replaces an earlier one with the same answer link. Lines without an answer link (written before
+    this rule) are only what findings.json lists."""
+    lines = [h.strip() for h in data.get("human", []) if h.strip()]
+    keys = {answer_key(h) for h in lines if answer_key(h)}
+    prior = HUMAN_LINE_RE.findall(old_summary["body"]) if old_summary else []
+    lines += [h.strip() for h in prior if answer_key(h) and answer_key(h) not in keys]
+    checked = [h for h in lines if answer_key(h) and checked_by(base, me, answer_key(h))]
+    data["human"] = [h for h in lines if h not in checked]
+    return checked
+
+
+def human_warnings(data):
+    return [f"for-a-human line has no link to the author's answer, so it can't be checked off with 👍: {h[:60]}…"
+            for h in data.get("human", []) if h.strip() and not answer_key(h)]
+
+
 def graphql_available():
     """Claude Code cloud sessions block GraphQL; they expose review threads through REST `ccr` routes instead."""
     global _GRAPHQL
@@ -452,6 +492,7 @@ def main():
     # Answered ids ride in the summary's hidden marker, so the list survives rounds even if an agent drops one.
     prior_answered = ANSWERED_RE.search(old_summary["body"]) if old_summary else None
     data["answered"] = sorted(set(data.get("answered", [])) | set(prior_answered.group(1).split(",") if prior_answered else []))
+    checked_human = merge_human(data, old_summary, base, me)
     gone = [fid for fid in dict.fromkeys([*existing, *summary_ids]) if fid not in all_ids]
     withdrawn_ids = {fid for fid in gone if fid in existing and existing[fid]["id"] in withdrawn_roots}
     # Findings the author answered (declined, deferred to an issue, or resolved without a change) aren't "fixed".
@@ -460,9 +501,12 @@ def main():
                              coderabbit_thread_counts(roots, threads), len(answered_ids))
 
     warnings = (brevity_warnings(data) + overlap_warnings(plan["new_line"] + plan["new_file"], others, threads)
-                + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files) + body_warnings(data, repo, num, placed))
+                + sha_warnings(data, base, num, list(dict.fromkeys([pr["base"]["ref"], pr["base"]["repo"]["default_branch"]]))) + anchor_warnings(placed, pr_files) + body_warnings(data, repo, num, placed)
+                + human_warnings(data))
     write_preview(out, data, placed, bodies, plan, summary, old_summary, warnings, head, fixed_by)
     print(f"Preview: {out}")
+    for h in checked_human:
+        print(f"checked off (👍 on the answer): {h[:100]}")
     for w in warnings:
         print(f"warning: {w}")
     if not post:

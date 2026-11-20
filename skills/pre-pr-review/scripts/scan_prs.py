@@ -1,6 +1,7 @@
 """List open PRs needing review: NEW (no summary of ours yet), MOVED (head differs from the
 commit our last summary reviewed) or REPLIED (head unchanged, but a human replied on one of our finding threads, or
-the PR author commented on the PR, after our last summary: the summary needs a refresh, the code no re-review). Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
+the PR author commented on the PR, after our last summary) or CHECKED (head unchanged, and we reacted 👍 to the
+answer a 👤 For a human line links). Both need a summary refresh, not a code re-review. Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
 Fetch failures print ERR, never NEW. REST only (works in Claude Code cloud sessions).
 
 A PR whose head was pushed less than SETTLE_MINUTES ago (default 30) is left out, so a burst of pushes is
@@ -11,7 +12,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from ghrest import (GhError, mergeability, open_prs, pr_detail, pushed_at, replies_since_summary, review_decision,
-                    skipped_by_label, summaries)
+                    skipped_by_label, summaries, checked_human)
 
 SETTLE = timedelta(minutes=float(os.environ.get("SETTLE_MINUTES", "30")))
 
@@ -38,6 +39,8 @@ def main():
                 continue
             if replies:
                 print(n, "REPLIED", sha[:9], f"{replies} new", merge)
+            elif checked := checked_human(bodies[-1]):
+                print(n, "CHECKED", sha[:9], f"{checked} checked", merge)
             continue
         try:
             age = datetime.now(timezone.utc) - pushed_at(sha)

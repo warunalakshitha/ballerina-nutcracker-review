@@ -148,6 +148,23 @@ def replies_since_summary(n, author):
     return count
 
 
+HUMAN_ANSWER_RE = re.compile(r"^- 👤 \*\*For a human\*\* · .*?https://github\.com/[^\s)]+/pull/\d+#(discussion_r|issuecomment-)(\d+)", re.M)
+
+
+def checked_human(summary):
+    """For-a-human lines in the summary whose linked answer we've reacted 👍 to (checked by the reviewer); the
+    next summary post drops them (post_review.py)."""
+    count = 0
+    for kind, cid in HUMAN_ANSWER_RE.findall(summary):
+        route = f"pulls/comments/{cid}" if kind == "discussion_r" else f"issues/comments/{cid}"
+        try:
+            reactions = api(f"repos/{REPO}/{route}/reactions?content=%2B1&per_page=100", paginate=True)
+        except GhError:
+            continue
+        count += any(r["user"]["login"] == ME for r in reactions)
+    return count
+
+
 def graphql(q, args=(), tries=4):
     """Parsed `gh api graphql` output, or None if it fails after retries (cloud sessions may lack GraphQL)."""
     for i in range(tries):
