@@ -40,8 +40,10 @@ FINDING_ID_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
 ANSWERED_MARKER = "<!-- pre-pr-review:answered ids={} -->"
 ANSWERED_RE = re.compile(r"<!-- pre-pr-review:answered ids=(\S+) -->")
 LEGACY_SUMMARY_PREFIX = "# Review report — #"
-SEVERITY_LABEL = {"important": "Important", "verify": "Verify", "nit": "Nit"}
-SEVERITY_BADGE = {"important": "🔴", "verify": "🟡", "nit": "🔵"}
+# "commit": commit history, PR title or PR body (squash, reword, rebase): not a code finding, so it doesn't keep
+# a PR off ready_table.py's Can merge table; the row warns to fix it before merging instead.
+SEVERITY_LABEL = {"important": "Important", "verify": "Verify", "nit": "Nit", "commit": "Commit/PR"}
+SEVERITY_BADGE = {"important": "🔴", "verify": "🟡", "nit": "🔵", "commit": "📝"}
 MAX_TITLE, MAX_BODY, MAX_SENTENCES = 80, 400, 3
 MAX_SUMMARY_LINE, MAX_ITEMS, MAX_ITEM = 160, 5, 140
 MAX_FIX = 60
@@ -248,6 +250,8 @@ def brevity_warnings(data):
             warn.append(f"{fid}: body is {len(body)} chars / {sentences} sentences (max {MAX_BODY} / {MAX_SENTENCES})")
         if "<br>" in body or "\n|" in body:
             warn.append(f"{fid}: body has a table or <br>; put code in `code` instead")
+        if f["severity"] == "commit" and f.get("anchor") != "pr":
+            warn.append(f"{fid}: a commit finding is about commits, the PR title or body; anchor it on the PR (\"anchor\": \"pr\")")
         code = f.get("code")
         if code and code.get("lang", "ballerina") == "ballerina" and f.get("outputs") and not re.search(r"function main\b|^\s*service\b", code["text"], re.M):
             warn.append(f"{fid}: code has outputs but no `main`; make it a runnable program with @output/@error markers")
@@ -327,7 +331,7 @@ def body_warnings(data, repo, num, placed):
     if any(where == "pr" and re.search(r"\bbody\b|description", f"{f['title']} {f['body']}", re.I) for f, where in placed):
         return []
     lines = "; ".join(" ".join(l.split()) for l in r.stdout.splitlines() if l.strip())
-    return [f"check_pr_body.py reports {lines}, but no PR-level finding covers the PR body; add the PR-body Nit "
+    return [f"check_pr_body.py reports {lines}, but no PR-level finding covers the PR body; add the PR-body Commit/PR finding "
             "(SKILL.md step 3.6), unless the author already answered it"]
 
 

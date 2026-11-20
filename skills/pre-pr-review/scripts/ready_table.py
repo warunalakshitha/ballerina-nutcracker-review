@@ -7,7 +7,9 @@ A PR can merge when all of these hold:
 - GitHub reports it mergeable (no conflicts)
 - based on the default branch (a stacked PR waits for the PR below it)
 - no CI check on the head failed (skipped/neutral count as passed; pending ones show as "after CI pending")
-- our latest "PR review summary" reviewed the current head and reports 0 findings
+- our latest "PR review summary" reviewed the current head and reports 0 findings, not counting 📝 Commit/PR ones
+  (commit history, PR title or body): those leave the PR under Can merge with a warning to fix them first,
+  since a merge-commit or rebase merge lands the commits as they are
 - none of our finding threads is unresolved
 Findings the summary still lists count as closed when the author has replied to every one; the PR's row in
 Can merge or Cannot merge says how many, for a manual check. A "👤 For a human" item in our summary (a decline the
@@ -21,7 +23,8 @@ import functools
 import re
 
 from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
-    skipped_by_label, summaries, answered_findings, unresolved_finding_threads, changes_requested_by, unresolved_other_threads
+    skipped_by_label, summaries, answered_findings, unresolved_finding_threads, changes_requested_by, unresolved_other_threads, \
+    COMMIT_LABEL, code_findings, status_counts
 
 # Stack members share base PRs, so fetch each PR's detail once.
 detail = functools.lru_cache(maxsize=None)(pr_detail)
@@ -79,6 +82,19 @@ def human_checks(p):
     return [line.split("·", 1)[1].strip() for line in body.splitlines() if line.startswith("- 👤 **For a human** ·")]
 
 
+def commit_items(p):
+    """📝 Commit/PR findings our summary lists at the PR's current head (0 if it reviewed an older head)."""
+    body = latest_summary(p["number"])
+    shas = re.findall(r"reviewed `([0-9a-f]{7,40})", body)
+    if not shas or not p["head"]["sha"].startswith(shas[-1]):
+        return 0
+    return status_counts(body).get(COMMIT_LABEL, 0)
+
+
+def commit_warning(k):
+    return f" · ⚠️ fix {k} Commit/PR item{'s' if k > 1 else ''} first (squash, reword or rebase)" if k else ""
+
+
 def why_not_ready(p, by_head):
     n, sha = p["number"], p["head"]["sha"]
     merge = mergeability(detail(n))
@@ -97,11 +113,12 @@ def why_not_ready(p, by_head):
         if not shas:
             return "awaiting first review"
         return f"awaiting re-review: pushed since our review of `{shas[-1][:9]}`"
-    status = next((line for line in body.splitlines() if "reviewed `" in line), "")
     # Findings the author answered (declined, deferred) count as closed, though the summary still lists them.
-    answered = not status.startswith("0 findings") and answered_findings(n, body)
-    if not status.startswith("0 findings") and not answered:
-        counts = re.findall(r"\*\*(\d+ [A-Za-z]+)\*\*", status)
+    # Commit/PR findings don't block: the Can merge row warns about them instead.
+    open_code = code_findings(body)
+    answered = open_code and answered_findings(n, body)
+    if open_code and not answered:
+        counts = [f"{k} {label}{'s' if label == 'Nit' and k > 1 else ''}" for label, k in status_counts(body).items()]
         return "open findings" + (": " + ", ".join(counts) if counts else "")
     if not answered and unresolved_finding_threads(n):
         return "unresolved finding threads"
@@ -172,6 +189,7 @@ def main():
             decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
             checks = human_checks(p)
             answered = answered_findings(p["number"], latest_summary(p["number"]))
+            commits = commit_items(p)
             q = queue.get(p["number"])
             removal = None if q else queue_removal(p["number"])
         except GhError:
@@ -181,6 +199,8 @@ def main():
         if checks and not (why and why.startswith("open findings")):
             humans.append((p, checks))
         note = f" ({answered} answered by the author, check by hand)" if answered else ""
+        if not why or waits:
+            note += commit_warning(commits)
         if removal:
             # The queue rejected it (or someone took it out): listed only in its own table, not as mergeable.
             removed.append((p, removal, (why or "no blocker found; re-queue it") + note))
@@ -213,7 +233,7 @@ def main():
     print(f"## Can merge ({len(mergeable)})\n")
     if queue_read is None:
         print("Couldn't read the merge queue; a queued PR shows as `ready` here.\n")
-    print("0 findings, no changes requested, no unresolved review threads (ours, humans' or CodeRabbit's), no conflicts, reviewed at the current head, not waiting on another PR.\n")
+    print("0 findings (📝 Commit/PR items aside: the Status column warns to fix them before merging, as a merge-commit or rebase merge lands commits as they are), no changes requested, no unresolved review threads (ours, humans' or CodeRabbit's), no conflicts, reviewed at the current head, not waiting on another PR.\n")
     print("| PR | Title | Author | Approval | Auto-merge | Status |")
     print("|---|---|---|---|---|---|")
     for p, state, decision in mergeable:

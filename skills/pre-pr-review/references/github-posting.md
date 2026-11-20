@@ -11,7 +11,7 @@ file says what to put in `findings.json` and how to write it.
 | Nit, including unnecessary, oversized or inaccurate new comments (not unit-test justification comments) | inline comment with a `suggestion` (empty string = delete the lines) |
 | Concern about a whole changed file | file-level comment (`"anchor": "file"`) |
 | Missing code (e.g. a test the fix needs) | inline on the changed line it belongs to, code in `code` |
-| Commit type/message, PR title or body problems (e.g. missing `Closes #N`) | a finding with `"anchor": "pr"` (no `path`): counted in the status line and rendered in the summary as its badge and plain-English title, body folded — never a plain `summary.items` bullet, and never a file comment on an unrelated file |
+| Commit type/message, unsquashed corrections, PR title or body problems (e.g. missing `Closes #N`) | a `commit` finding (📝 **Commit/PR**; AI authorship and a commit that doesn't build stay `important`) with `"anchor": "pr"` (no `path`): counted in the status line and rendered in the summary as its badge and plain-English title, body folded — never a plain `summary.items` bullet, and never a file comment on an unrelated file |
 | Missing subset doc or other code gap | a finding anchored on the implementing file/line (inline or `"anchor": "file"`) |
 | Informational PR-wide notes only (merge conflicts, perf numbers, `Read line by line`) | `summary.items` |
 
@@ -23,7 +23,9 @@ outside the diff becomes a file-level comment, a file outside the diff becomes a
 summary item. Nothing is dropped.
 
 Severity is marked with a colored badge and bold label — 🔴 **Important**,
-🟡 **Verify**, 🔵 **Nit** — in both the inline header and the summary counts.
+🟡 **Verify**, 🔵 **Nit**, 📝 **Commit/PR** — in both the inline header and the summary counts.
+Commit/PR findings are counted apart from code findings: a PR whose only open findings are Commit/PR
+ones still shows under Can merge on the board, with a warning to fix them first.
 GitHub strips font colors from comments, so the badge carries the color. Every
 agent comment starts with 🤖 (it is posted from the developer's account); the
 tool name is not repeated in each comment.
@@ -88,7 +90,7 @@ Never inside the repo checkout: keep it in a temp/scratch directory. Shape: see
 | `head_sha` | PR head the review ran on; posting refuses if the PR moved (`--allow-moved-head` when only `main` was merged in and the diff hash is unchanged) |
 | `reviewed_diff`, `skill_version` | same values as the report frontmatter |
 | `findings[].id` | stable slug, unique in the PR; reruns match comments by it |
-| `severity` | `important` (confirmed defect), `verify` (a question for the author: intent or a design choice we can't settle, or a suspected bug we couldn't confirm; phrased as a question) or `nit` |
+| `severity` | `important` (confirmed defect), `verify` (a question for the author: intent or a design choice we can't settle, or a suspected bug we couldn't confirm; phrased as a question), `nit`, or `commit` (commit history, PR title or body; PR-anchored only) |
 | `kind` | short pass name shown in the prefix (`Test`, `Correctness`, `Comment`, …) |
 | `anchor` | `line` (default), `file` or `pr` |
 | `path`, `line`, `start_line` | RIGHT-side lines in the PR head; `start_line` for a range |
