@@ -343,8 +343,9 @@ def body_warnings(data, repo, num, placed):
 
 
 def answer_key(line):
-    m = ANSWER_URL_RE.search(line)
-    return (m.group(1), m.group(2)) if m else None
+    """The answer link: the line's last comment URL (evidence links may come before it)."""
+    found = ANSWER_URL_RE.findall(line)
+    return found[-1] if found else None
 
 
 def checked_by(base, me, key):

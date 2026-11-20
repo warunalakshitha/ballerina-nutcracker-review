@@ -148,11 +148,11 @@ def replies_since_summary(n, author):
     return count
 
 
-HUMAN_ANSWER_RE = re.compile(r"^- 👤 \*\*For a human\*\* · .*?https://github\.com/[^\s)]+/pull/\d+#(discussion_r|issuecomment-)(\d+)", re.M)
+HUMAN_ANSWER_RE = re.compile(r"^- 👤 \*\*For a human\*\* · .*https://github\.com/[^\s)]+/pull/\d+#(discussion_r|issuecomment-)(\d+)", re.M)
 
 
 def checked_human(summary):
-    """For-a-human lines in the summary whose linked answer we've reacted 👍 to (checked by the reviewer); the
+    """For-a-human lines in the summary whose linked answer (the line's last comment URL) we've reacted 👍 to (checked by the reviewer); the
     next summary post drops them (post_review.py)."""
     count = 0
     for kind, cid in HUMAN_ANSWER_RE.findall(summary):

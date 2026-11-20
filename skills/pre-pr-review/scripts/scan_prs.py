@@ -1,5 +1,5 @@
 """List open PRs needing review: NEW (no summary of ours yet), MOVED (head differs from the
-commit our last summary reviewed) or REPLIED (head unchanged, but a human replied on one of our finding threads, or
+commit our last summary reviewed), REPLIED (head unchanged, but a human replied on one of our finding threads, or
 the PR author commented on the PR, after our last summary) or CHECKED (head unchanged, and we reacted 👍 to the
 answer a 👤 For a human line links). Both need a summary refresh, not a code re-review. Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
 Fetch failures print ERR, never NEW. REST only (works in Claude Code cloud sessions).

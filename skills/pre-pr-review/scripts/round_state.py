@@ -83,10 +83,14 @@ def send(started, path, name):
 
 
 def wait_posted(findings, minutes="15"):
-    """Wait until the PR's latest "PR review summary" comment names the head this review covered."""
+    """Wait until the PR's latest "PR review summary" comment names the head this review covered and was written
+    after findings.json. The time check matters for a refresh (REPLIED/CHECKED): the head doesn't change, so the
+    old summary already names it."""
     import json
     import re
+    from datetime import datetime, timezone
     data = json.load(open(findings))
+    written = datetime.fromtimestamp(os.path.getmtime(findings) - 120, timezone.utc)
     n, head = data["pr"], data["head_sha"]
     repo = data.get("repo", "ballerina-nutcracker/ballerina")
     deadline = time.time() + 60 * float(minutes)
@@ -94,13 +98,15 @@ def wait_posted(findings, minutes="15"):
         r = subprocess.run(["gh", "api", f"repos/{repo}/issues/{n}/comments?per_page=100&sort=updated&direction=desc"],
                            capture_output=True, text=True)
         if r.returncode == 0:
-            bodies = [c["body"] for c in json.loads(r.stdout) if "PR review summary" in c.get("body", "")]
-            shas = re.findall(r"reviewed `([0-9a-f]{7,40})", bodies[-1]) if bodies else []
-            if any(head.startswith(s) for s in shas):
+            ours = [c for c in json.loads(r.stdout) if "PR review summary" in c.get("body", "")]
+            latest = max(ours, key=lambda c: c["updated_at"], default=None)
+            shas = re.findall(r"reviewed `([0-9a-f]{7,40})", latest["body"]) if latest else []
+            fresh = latest and datetime.fromisoformat(latest["updated_at"].replace("Z", "+00:00")) >= written
+            if fresh and any(head.startswith(s) for s in shas):
                 print(f"#{n}: summary shows {head[:9]}: posted")
                 return 0
         if time.time() > deadline:
-            print(f"#{n}: summary doesn't show {head[:9]} yet: not posted (see the post-outbox Action runs)")
+            print(f"#{n}: no summary of {head[:9]} written since the review yet: not posted (see the post-outbox Action runs)")
             return 1
         time.sleep(30)
 
