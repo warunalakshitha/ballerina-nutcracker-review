@@ -12,6 +12,8 @@ sweep, so an author who pushed is reviewed first), then the stale ones, oldest P
 Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head),
 conflicting PRs, which a review would only report as conflicting, and PRs in the merge queue, which are
 about to land. Fetch failures print ERR.
+A swept PR whose author answered our findings since its summary is listed with the moved ones
+(`<N> REPLIED <head> <k> new <merge>`, as scan_prs.py reports it); a stale PR's full re-review reads replies anyway.
 Exit status 0 with no output means the sweep is done.
 """
 import os
@@ -19,7 +21,8 @@ import re
 import subprocess
 import sys
 
-from ghrest import GhError, merge_queue, mergeability, open_prs, pr_detail, review_decision, skipped_by_label, summaries
+from ghrest import (GhError, merge_queue, mergeability, open_prs, pr_detail, replies_since_summary, review_decision,
+                    skipped_by_label, summaries)
 
 TOOLS = os.environ.get("TOOLS", ".")
 TOOLS_RE = re.compile(r"<!-- pre-pr-review:summary [^>]*\btools=([0-9a-f]{7,40})")
@@ -68,6 +71,14 @@ def main():
         tools_sha = tools[-1] if tools else None
         if not swept(tools_sha, target):
             stale.append(f"{n} STALE {tools_sha or 'none'} {merge}")
+            continue
+        try:
+            replies = replies_since_summary(n, p["user"]["login"])
+        except GhError as e:
+            print(n, "ERR", sha[:9], e)
+            continue
+        if replies:
+            moved.append(f"{n} REPLIED {sha[:9]} {replies} new {merge}")
     for line in moved + stale:
         print(line)
 

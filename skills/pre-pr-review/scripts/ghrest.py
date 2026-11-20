@@ -125,6 +125,29 @@ def summaries(n):
     return [c["body"] for c in sorted(ours, key=lambda c: c["updated_at"])]
 
 
+def _human(c):
+    return c["user"].get("type") == "User" and c["user"]["login"] != ME
+
+
+def replies_since_summary(n, author):
+    """Human replies our latest summary hasn't taken in: replies by anyone but us on our finding threads
+    (resolved or not), plus comments the PR author made on the PR itself (answers to PR-level findings),
+    newer than that summary's last edit. 0 when there's no summary. Posting a summary always follows such a reply
+    (post_review.py reposts it as the PR's last comment), so a refresh clears the count."""
+    issue = api(f"repos/{REPO}/issues/{n}/comments?per_page=100", paginate=True)
+    ours = [c for c in issue if c["user"]["login"] == ME and "PR review summary" in c["body"]]
+    if not ours:
+        return 0
+    # Older posting runs edited the summary in place, so its last edit, not its creation, is when it was written.
+    since = max(c["updated_at"] for c in ours)
+    review = api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)
+    roots = {c["id"] for c in review
+             if not c.get("in_reply_to_id") and c["user"]["login"] == ME and "pre-pr-review:finding" in c["body"]}
+    count = sum(1 for c in review if c.get("in_reply_to_id") in roots and _human(c) and c["created_at"] > since)
+    count += sum(1 for c in issue if c["user"]["login"] == author and _human(c) and c["created_at"] > since)
+    return count
+
+
 def graphql(q, args=(), tries=4):
     """Parsed `gh api graphql` output, or None if it fails after retries (cloud sessions may lack GraphQL)."""
     for i in range(tries):
@@ -218,12 +241,26 @@ def _unresolved_firsts(n):
     return [comments[i] for i, resolved in review_threads(n) if not resolved and i in comments]
 
 
+COMMIT_LABEL = "Commit/PR"  # post_review.py's label for commit, PR title and PR body findings
+
+
+def status_counts(summary):
+    """{label: count} from the summary's status line, e.g. {"Nit": 2, "Commit/PR": 1}."""
+    status = next((line for line in summary.splitlines() if "reviewed `" in line), "")
+    return {"Nit" if label == "Nits" else label: int(k)
+            for k, label in re.findall(r"\*\*(\d+) ([A-Za-z/]+)\*\*", status)}
+
+
+def code_findings(summary):
+    """Open findings that keep a PR from merging: every counted finding except Commit/PR ones."""
+    return sum(k for label, k in status_counts(summary).items() if label != COMMIT_LABEL)
+
+
 def answered_findings(n, summary):
     """Number of findings the summary still counts that the author has answered since: every unresolved finding
     thread of ours ends with a human's reply (a decline, a deferral or a question back), and the summary has no
-    PR-level finding (those have no thread to reply in). 0 when any finding is still unanswered."""
-    status = next((line for line in summary.splitlines() if "reviewed `" in line), "")
-    counted = sum(int(k) for k in re.findall(r"\*\*(\d+) [A-Za-z]+\*\*", status))
+    PR-level code finding (those have no thread to reply in). Commit/PR findings don't count either way. 0 when any finding is still unanswered."""
+    counted = code_findings(summary)
     if not counted or re.search(r"^- (🔴|🟡|🔵|❓) \*\*", summary, re.M):
         return 0
     comments = api(f"repos/{REPO}/pulls/{n}/comments?per_page=100", paginate=True)
