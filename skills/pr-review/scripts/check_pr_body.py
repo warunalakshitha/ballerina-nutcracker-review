@@ -36,6 +36,8 @@ CLOSING = re.compile(r"\b(fix(e[sd])?|close[sd]?|resolve[sd]?):?\s+(#\d+|https:/
 # a top-level directory or a corpus subset (so module names like `ballerina/tcp` are skipped).
 PATH_TOKEN = re.compile(r"`([A-Za-z0-9_.{},*…/-]+)`")
 FILE_EXT = re.compile(r"\.(go|bal|md|txt|txtar|toml|ya?ml|py|sh|json|mod)$")
+# The subset doc checklist item names the doc itself; a ticked corpus item can name a corpus/lib/subset3/ path.
+SUBSET_DOC_ITEM = re.compile(r"doc/(lang|library)/subset|subset<n>\.md|subset doc", re.I)
 # A corpus fixture named by its stem, e.g. `start-action-cast-v` for corpus/bal/.../start-action-cast-v.bal.
 FIXTURE_STEM = re.compile(r"^[a-z0-9][a-z0-9_-]*-f?[vep]$")
 NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b"
@@ -114,6 +116,8 @@ def main():
             what = next((f"; the PR {v}" for k, v in gone.items() if stem(k) == token), "")
             problems.append(f"PATH        `{token}` names a corpus fixture the PR doesn't add or change{what}")
             continue
+        if FILE_EXT.fullmatch(token):
+            continue
         first = token.split("/")[0]
         if not FILE_EXT.search(token) and ("/" not in token or first not in top and not re.match(r"subset\d+$", first)):
             continue
@@ -131,7 +135,7 @@ def main():
     if ticked:
         if any("corpus test" in l.lower() for l in ticked) and not any(f.startswith(("corpus/", "ls/corpus/")) for f in files):
             problems.append("CHECKBOX    corpus tests ticked, but the PR adds or changes no file under corpus/ or ls/corpus/")
-        if any("subset" in l.lower() for l in ticked) and not any(re.match(r"doc/(lang|library)/subset\d+\.md$", f) for f in files):
+        if any(SUBSET_DOC_ITEM.search(l) for l in ticked) and not any(re.match(r"doc/(lang|library)/subset\d+\.md$", f) for f in files):
             problems.append("CHECKBOX    subset doc ticked, but the PR doesn't change doc/lang/subset<N>.md or doc/library/subset<N>.md")
     for p in problems:
         print(p)
