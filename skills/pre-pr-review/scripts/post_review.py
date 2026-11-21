@@ -36,6 +36,9 @@ import sys
 PREFIX = "🤖"
 FINDING_MARKER = "<!-- pre-pr-review:finding id={} -->"
 SUMMARY_MARKER = "<!-- pre-pr-review:summary pr={} diff={} skill={} -->"
+# Summary layout version, written as fmt=<n> in the marker. 2: 📝 Commit/PR findings, linked For-a-human lines.
+# scan_prs.py lists a summary at an older version as REFORMAT, and refresh_summary.py rebuilds it.
+SUMMARY_FORMAT = 2
 FINDING_ID_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
 ANSWERED_MARKER = "<!-- pre-pr-review:answered ids={} -->"
 ANSWERED_RE = re.compile(r"<!-- pre-pr-review:answered ids=(\S+) -->")
@@ -203,6 +206,7 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     marker = SUMMARY_MARKER.format(data["pr"], data["reviewed_diff"][:8], data["skill_version"][:8])
     if commit := skill_commit(data):
         marker = marker.replace(" -->", f" tools={commit} -->")
+    marker = marker.replace(" -->", f" fmt={SUMMARY_FORMAT} -->")
     if data.get("answered"):
         marker += "\n" + ANSWERED_MARKER.format(",".join(data["answered"]))
     lines = [marker,
@@ -246,6 +250,8 @@ def brevity_warnings(data):
         warn.append(f"summary has {len(s['checked'])} checked entries (max {MAX_CHECKED})")
     warn += [f"checked entry is {len(c)} chars (max {MAX_CHECK}): {c}" for c in s.get("checked", []) if len(c) > MAX_CHECK]
     for f in data["findings"]:
+        if f.get("keep_posted"):
+            continue  # posted earlier and left as is
         fid = f["id"]
         if len(f.get("fix", "")) > MAX_FIX:
             warn.append(f"{fid}: fix is {len(f['fix'])} chars (max {MAX_FIX})")
@@ -449,8 +455,10 @@ def main():
 
     pr_files = paged(f"{base}/pulls/{num}/files")
     lines = commentable_lines(pr_files)
-    placed = [(f, place(f, lines)) for f in data["findings"]]
-    bodies = {f["id"]: render_finding(f, where) for f, where in placed}
+    # A summary-only refresh (refresh_summary.py) lists inline findings already posted as `keep_posted`: they are
+    # counted in the summary and their comments are left exactly as they are.
+    placed = [(f, "kept" if f.get("keep_posted") else place(f, lines)) for f in data["findings"]]
+    bodies = {f["id"]: render_finding(f, where) for f, where in placed if where != "kept"}
 
     review_comments = paged(f"{base}/pulls/{num}/comments")
     roots = [c for c in review_comments if not c.get("in_reply_to_id")]
@@ -465,7 +473,7 @@ def main():
     # thread must not get "no longer reported" and be resolved.
     current = {f["id"] for f, where in placed}
     for f, where in placed:
-        if where == "pr":
+        if where in ("pr", "kept"):
             continue
         old = existing.get(f["id"])
         if old and (old.get("line") is not None or where == "file"):
@@ -479,6 +487,10 @@ def main():
     for fid, c in existing.items():
         if fid not in current and not threads.get(c["id"], (None, False))[1]:
             plan["resolve"].append(c)
+    summary_only = bool(data.get("summary_only"))
+    if summary_only:
+        # Only the summary is rewritten: no inline comment is posted, edited or resolved.
+        plan = {k: [] for k in plan}
 
     issue_comments = paged(f"{base}/issues/{num}/comments")
     # The most recently updated summary carries state forward; all earlier summaries are deleted on post.
@@ -549,7 +561,11 @@ def main():
         gh(f"{base}/pulls/{num}/comments", payload={
             "commit_id": commit, "path": f["path"], "subject_type": "file", "body": bodies[f["id"]]})
     # The summary is kept as the PR's last comment so authors see it: post it anew, then drop the old one.
-    if summary_is_last(old_summary, summary, plan, issue_comments, review_comments, base, num):
+    if summary_only and old_summary:
+        # Edited in place: a layout refresh says nothing new to the author, so it shouldn't notify anyone.
+        res = old_summary if old_summary["body"] == summary else \
+            gh(f"{base}/issues/comments/{old_summary['id']}", "-X", "PATCH", payload={"body": summary})
+    elif summary_is_last(old_summary, summary, plan, issue_comments, review_comments, base, num):
         res = old_summary
     else:
         res = gh(f"{base}/issues/{num}/comments", payload={"body": summary})
@@ -579,7 +595,8 @@ def write_preview(out, data, placed, bodies, plan, summary, old_summary, warning
     parts = [f"<!-- Dry-run preview for PR #{data['pr']} at {head[:9]}. Not posted. -->", ""]
     if warnings:
         parts += ["## Warnings", *[f"- {w}" for w in warnings], ""]
-    state = ("new" if not old_summary else f"unchanged; kept if still the last comment, else reposted and old summaries deleted"
+    state = ("new" if not old_summary else "edited in place (summary-only refresh)" if data.get("summary_only")
+             else f"unchanged; kept if still the last comment, else reposted and old summaries deleted"
              if old_summary["body"] == summary else "reposted as last comment, old summaries deleted")
     parts += [f"## Summary comment ({state})", "", summary]
     for f, where in placed:
