@@ -40,12 +40,12 @@ def git(*args):
 
 
 def runs(repo, sha):
-    """{check name: [conclusions]} for every attempt on sha."""
+    """{check name: [(run id, conclusion)]} for every attempt on sha."""
     out, page = {}, 1
     while True:
         batch = gh(f"repos/{repo}/commits/{sha}/check-runs?filter=all&per_page=100&page={page}")["check_runs"]
         for c in batch:
-            out.setdefault(c["name"], []).append(c.get("conclusion"))
+            out.setdefault(c["name"], []).append((c["id"], c.get("conclusion")))
         if len(batch) < 100:
             return out
         page += 1
@@ -71,8 +71,10 @@ def main():
     if old == head:
         return 0
     before, now = runs(repo, old), runs(repo, head)
-    regressed = sorted(name for name, results in now.items()
-                       if FAILED & set(results) and "success" in before.get(name, []))
+    # Only the latest attempt of a check counts at the current head: an earlier attempt that failed or was
+    # cancelled (e.g. by a force-push) and then re-ran green isn't a regression (#1390, #1422).
+    regressed = sorted(name for name, attempts in now.items()
+                       if max(attempts)[1] in FAILED and "success" in {c for _, c in before.get(name, [])})
     if not regressed:
         return 0
     a, b = own_diff(base_ref, old), own_diff(base_ref, head)
