@@ -13,14 +13,15 @@ post_review.py turns into an in-place edit of the summary; inline comments are l
   when the thread was resolved without one), unless the thread points to an issue that tracks it. An earlier
   unlinked line about the same finding keeps its text and gains the link.
 - The marker's skill= and tools= are kept, so a later sweep still sees the code as reviewed with older skills.
-Exits 1 with a message when the PR can't be refreshed this way (no summary, moved head, counts that don't add up).
+Exits 1 with a message when the PR can't be refreshed this way (no summary, moved head, a new reply, counts that
+don't add up).
 REST only (works in Claude Code cloud sessions).
 """
 import json
 import re
 import sys
 
-from ghrest import ME, REPO, api, review_threads
+from ghrest import ME, REPO, api, replies_since_summary, review_threads
 
 FINDING_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
 MARKER_RE = re.compile(r"<!-- pre-pr-review:summary pr=\d+ diff=(\w+) skill=(\w+)(?: tools=(\w+))?(?: fmt=(\d+))? -->")
@@ -116,7 +117,7 @@ def answered_lines(n, answered, old_human):
         url = (answer or root)["html_url"]
         head = INLINE_HEAD_RE.search(root["body"])
         title = head.group(3) if head else fid
-        same_link = next((h for h in old_human if url in h), None)
+        same_link = next((h for h in old_human if f"({url})" in h), None)
         if same_link:
             used.add(same_link)
             out.append(same_link)  # already linked to this answer: keep the reviewer's words
@@ -148,6 +149,8 @@ def main():
     reviewed = re.findall(r"reviewed `([0-9a-f]{7,40})", body)
     if not reviewed or not head.startswith(reviewed[-1]):
         fail(f"#{n}: head moved since the summary; it needs a re-review, not a refresh")
+    if replies_since_summary(n, pr["user"]["login"]):
+        fail(f"#{n}: a reply came in since the summary; the next round handles it as REPLIED")
     diff, skill, tools, _ = marker.groups()
     tail, stack_line, checked, items, fixed_later, old_human, pr_findings = parse_summary(body)
     answered = ANSWERED_RE.search(body)
