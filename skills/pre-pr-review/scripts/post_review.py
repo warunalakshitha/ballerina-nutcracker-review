@@ -602,6 +602,9 @@ def write_preview(out, data, placed, bodies, plan, summary, old_summary, warning
     for f, where in placed:
         if where == "pr":
             continue
+        if where == "kept":
+            parts += [f"## kept comment · {f['id']} · posted earlier, not touched", ""]
+            continue
         loc = f"{f['path']}:{f.get('start_line') or f['line']}-{f['line']}" if where == "line" else f"{f['path']} (file)"
         parts += [f"## {where} comment · {loc} · {action.get(id(f), 'unchanged')}", "", bodies[f["id"]], ""]
     if plan["resolve"]:
