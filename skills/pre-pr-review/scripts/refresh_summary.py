@@ -24,7 +24,7 @@ import sys
 from ghrest import ME, REPO, api, replies_since_summary, review_threads
 
 FINDING_RE = re.compile(r"<!-- pre-pr-review:finding id=(\S+) -->")
-MARKER_RE = re.compile(r"<!-- pre-pr-review:summary pr=\d+ diff=(\w+) skill=(\w+)(?: tools=(\w+))?(?: fmt=(\d+))? -->")
+MARKER_RE = re.compile(r"<!-- pre-pr-review:summary pr=\d+ diff=(\w+) skill=(\w+)(?: tools=(\w+))?(?: fmt=(\d+))?(?: text=\w+)? -->")
 ANSWERED_RE = re.compile(r"<!-- pre-pr-review:answered ids=(\S+) -->")
 BADGE = {"🔴": "important", "🟡": "verify", "🔵": "nit", "📝": "commit"}
 PR_ITEM_RE = re.compile(r"^- (🔴|🟡|🔵|📝) \*\*[\w/]+\*\* · (.*?)\.(?: \*\*Fix:\*\* (.*?))?(?: · `([^`]+):(\d+)`)? "

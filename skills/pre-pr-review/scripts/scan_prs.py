@@ -1,8 +1,9 @@
 """List open PRs needing review: NEW (no summary of ours yet), MOVED (head differs from the
 commit our last summary reviewed), REPLIED (head unchanged, but a human replied on one of our finding threads, or
 the PR author commented on the PR, after our last summary) or CHECKED (head unchanged, and we reacted 👍 to the
-answer a 👤 For a human line links), or REFORMAT (head unchanged, summary written in an older layout; conflicting PRs
-are left out). All three need a summary refresh, not a code re-review. Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
+answer a 👤 For a human line links), EDITED (head unchanged, the summary still lists a 📝 Commit/PR item, and the PR
+title or body changed since it was written), or REFORMAT (head unchanged, summary written in an older layout; conflicting PRs
+are left out). All four need a summary refresh, not a code re-review. Skips drafts, PRs approved at their current head and don't-merge/dnm/hold/wip labels.
 Fetch failures print ERR, never NEW. REST only (works in Claude Code cloud sessions).
 
 A PR whose head was pushed less than SETTLE_MINUTES ago (default 30) is left out, so a burst of pushes is
@@ -13,7 +14,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from ghrest import (GhError, mergeability, open_prs, pr_detail, pushed_at, replies_since_summary, review_decision,
-                    skipped_by_label, summaries, checked_human)
+                    skipped_by_label, summaries, checked_human, text_edited)
 
 SUMMARY_FORMAT = 2  # post_review.py's SUMMARY_FORMAT
 
@@ -50,6 +51,8 @@ def main():
                 print(n, "REPLIED", sha[:9], f"{replies} new", merge)
             elif checked := checked_human(bodies[-1]):
                 print(n, "CHECKED", sha[:9], f"{checked} checked", merge)
+            elif text_edited(bodies[-1], p):
+                print(n, "EDITED", sha[:9], merge)
             elif summary_format(bodies[-1]) < SUMMARY_FORMAT and merge != "CONFLICTING":
                 print(n, "REFORMAT", sha[:9], merge)
             continue

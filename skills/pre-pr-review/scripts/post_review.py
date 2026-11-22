@@ -33,6 +33,8 @@ import re
 import subprocess
 import sys
 
+from ghrest import pr_text_hash
+
 PREFIX = "🤖"
 FINDING_MARKER = "<!-- pre-pr-review:finding id={} -->"
 SUMMARY_MARKER = "<!-- pre-pr-review:summary pr={} diff={} skill={} -->"
@@ -207,6 +209,8 @@ def render_summary(data, placed, fixed, withdrawn=0, coderabbit=(0, 0), answered
     if commit := skill_commit(data):
         marker = marker.replace(" -->", f" tools={commit} -->")
     marker = marker.replace(" -->", f" fmt={SUMMARY_FORMAT} -->")
+    if data.get("pr_text_hash"):
+        marker = marker.replace(" -->", f" text={data['pr_text_hash']} -->")
     if data.get("answered"):
         marker += "\n" + ANSWERED_MARKER.format(",".join(data["answered"]))
     lines = [marker,
@@ -443,6 +447,8 @@ def main():
     me = gh("user")["login"]
     pr = gh(f"{base}/pulls/{num}")
     head = pr["head"]["sha"]
+    # The title and body this summary was checked against, so scan_prs.py can tell when the author edits them.
+    data["pr_text_hash"] = pr_text_hash(pr)
     if head != data["head_sha"] and not allow_moved:
         sys.exit(f"PR head is {head[:9]}, findings are for {data['head_sha'][:9]}: re-review, "
                  "or pass --allow-moved-head if the PR diff is unchanged (e.g. a merge of main)")

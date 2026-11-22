@@ -148,6 +148,30 @@ def replies_since_summary(n, author):
     return count
 
 
+CODERABBIT_NOTES_RE = re.compile(r"<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->.*?"
+                                 r"<!-- end of auto-generated comment: release notes by coderabbit\.ai -->", re.S)
+TEXT_HASH_RE = re.compile(r"<!-- pre-pr-review:summary [^>]*\btext=([0-9a-f]{8})")
+COMMIT_PR_LINE = "📝 **Commit/PR**"
+
+
+def pr_text_hash(pr):
+    """Hash of the PR's title and body, written as text=<hash> in the summary marker. CodeRabbit's release-notes
+    block is left out: CodeRabbit rewrites it on its own, and that isn't the author answering a finding."""
+    import hashlib
+    body = CODERABBIT_NOTES_RE.sub("", (pr.get("body") or "").replace("\r\n", "\n")).strip()
+    return hashlib.sha256(f"{pr.get('title') or ''}\n{body}".encode()).hexdigest()[:8]
+
+
+def text_edited(summary, pr):
+    """True when the summary still lists a 📝 Commit/PR item and the PR's title or body changed since it was
+    written. A title or body edit doesn't move the head and isn't a comment, so nothing else notices the author
+    fixing one. A summary without text= (written before the hash existed) counts as edited, once."""
+    if COMMIT_PR_LINE not in summary:
+        return False
+    m = TEXT_HASH_RE.search(summary)
+    return not m or m.group(1) != pr_text_hash(pr)
+
+
 HUMAN_ANSWER_RE = re.compile(r"^- 👤 \*\*For a human\*\* · .*https://github\.com/[^\s)]+/pull/\d+#(discussion_r|issuecomment-)(\d+)", re.M)
 
 

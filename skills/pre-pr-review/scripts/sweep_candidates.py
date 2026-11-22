@@ -14,7 +14,8 @@ conflicting PRs, which a review would only report as conflicting, and PRs in the
 about to land. Fetch failures print ERR.
 A swept PR whose author answered our findings since its summary is listed with the moved ones
 (`<N> REPLIED <head> <k> new <merge>`, as scan_prs.py reports it), and so is one with a 👤 For a human line
-we've checked off with 👍 (`<N> CHECKED <head> <k> checked <merge>`); a stale PR's full re-review reads replies anyway.
+we've checked off with 👍 (`<N> CHECKED <head> <k> checked <merge>`), and one whose author edited the PR title or body
+since a summary that lists a 📝 Commit/PR item (`<N> EDITED <head> <merge>`); a stale PR's full re-review reads replies anyway.
 Exit status 0 with no output means the sweep is done.
 """
 import os
@@ -23,7 +24,7 @@ import subprocess
 import sys
 
 from ghrest import (GhError, merge_queue, mergeability, open_prs, pr_detail, replies_since_summary, review_decision,
-                    skipped_by_label, summaries, checked_human)
+                    skipped_by_label, summaries, checked_human, text_edited)
 
 TOOLS = os.environ.get("TOOLS", ".")
 TOOLS_RE = re.compile(r"<!-- pre-pr-review:summary [^>]*\btools=([0-9a-f]{7,40})")
@@ -82,6 +83,8 @@ def main():
             moved.append(f"{n} REPLIED {sha[:9]} {replies} new {merge}")
         elif checked := checked_human(bodies[-1]):
             moved.append(f"{n} CHECKED {sha[:9]} {checked} checked {merge}")
+        elif text_edited(bodies[-1], p):
+            moved.append(f"{n} EDITED {sha[:9]} {merge}")
     for line in moved + stale:
         print(line)
 
