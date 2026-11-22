@@ -82,10 +82,21 @@ A PR that changes the UI needs a screenshot or GIF in its description (asked on 
 
 ### 3. Commits and PR description
 
-- Conventional Commits on every commit and the PR title (agreed on #87), ≤ 72 chars; validate as in the `commit-message-format` rules for nutcracker.
-- No AI co-author trailers or AI-authored commits (#105): `python3 $TOOLS/skills/pr-review/scripts/check_commit_trailers.py origin/<base>` in the worktree.
-- No unsquashed `fixup!` / `squash!` commits left at the head (#136).
-- The repo's `pull_request_template.md` is the generic WSO2 one; don't raise missing template sections. Do ask for the issue link when the PR fixes a reported problem.
+Same commit review as `skills/pr-review/SKILL.md` step 3 (rules 1–5), with one difference: the playground has no commit-lint CI (`ci.yml` runs only Biome), so we validate Conventional Commits ourselves. In the worktree run:
+
+```bash
+python3 $TOOLS/skills/pr-review/scripts/check_commit_trailers.py origin/<base> \
+  --pr "$PR" --repo ballerina-nutcracker/playground --conventional --ai-only
+```
+
+It runs nutcracker's `validate_commits.py` (fetched from `ballerina-nutcracker/ballerina` main) on the PR title and every non-merge commit subject, and also checks commit bodies, author/committer, GitHub author and the PR description. Every commit finding is PR-level (`"anchor": "pr"`), reported with SHA + subject. AI authorship is 🔴 **Important** and blocks merge; the rest are 📝 **Commit/PR** (`"severity": "commit"`), as in `github-posting.md`:
+
+- **Conventional Commits** on every commit subject and the PR title (agreed on #87): `<type>(<scope>): <description>`, lowercase, ≤ 72 chars (`SUBJECT`, `PR-TITLE`). Leftover `fixup!` / `squash!` commits fail too (#136).
+- **No AI authorship anywhere** (#105): no co-author trailer naming an AI tool, no `Generated-by:` / `Assisted-by:` / "Generated with Claude Code" line in a commit message, no AI tool or bot as git author, committer or GitHub author (`COAUTHOR`, `AI-TRAIL`, `AI-AUTHOR`, `AI-LOGIN`), and no AI attribution line in the PR description (`PR-BODY`; #105's body ended with "🤖 Generated with [Claude Code]").
+- **Human authors other than the PR opener are fine** (`--ai-only`): a sync PR like #151 carries teammates' commits, and a teammate may push to or co-author a PR. Only AI tools (Claude, Cursor, Copilot, Codex, …) are rejected.
+- **Atomic commits, no unsquashed corrections** (pr-review rule 2): a commit that fixes, narrows or rewords an earlier commit on the same PR (e.g. `fix: address review comments`) should be squashed into it; name the target SHA. No `go build` rebase check here: run `bun run lint && bun run build` per commit with `git rebase -x` only when the PR has several commits touching code.
+- **Type matches behaviour** (pr-review rule 5): a `refactor` / `style` / `chore` that changes what the user sees or what the runtime does is `fix` / `feat`.
+- The repo's `pull_request_template.md` is the generic WSO2 one; don't raise missing template sections or run `check_pr_body.py`. Do ask for the issue link when the PR fixes a reported problem.
 
 ### 4. Architecture fit and scope
 
