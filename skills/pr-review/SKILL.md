@@ -495,6 +495,8 @@ Run when the PR changes language semantics, runtime behavior, stdlib, or error/p
 
 5. If implementation intent is unclear, read the matching jBallerina source under `$JBALLERINA_SRC` and note divergence
 
+**Diagnostics relaxed.** When the PR turns a compile error into a warning, or stops reporting it for some inputs, a parity check of the general case is not enough. Search the spec (`$SP/spec.html`) for every sentence that keeps some case of that rule an error: read the construct's section and grep for "compile-time error", "unless", "except" and "if the type" near it. Write a fixture for each case it names, at module level, in a function, and in a function literal, and run it on head, base and jBallerina. A case the spec keeps an error that now compiles is Important, even when jBallerina also accepts it (#1263: unused variables became warnings, but the spec keeps an unused `var` whose inferred type includes `error` an error).
+
 **The PR's own fixtures, always.** Whenever the PR adds or changes a `corpus/bal` or `corpus/lib` fixture, run each added or changed `*-v.bal` / `*-p.bal` with `bal run` and compare with its `@output` / `@panic` markers, and run each `*-e.bal` and confirm jBallerina also rejects it at the marked lines (messages may differ). This runs even when the rest of this step is skipped. A `-v`/`-p` fixture jBallerina rejects or prints differently is Important unless the spec (4a) or `INTENT.md` justifies it (#1255: `<any> wait f` on `future<int>` passed on Nutcracker but jBallerina rejects it, since `int|error` can't be cast to `any`). `*-f{v,e,p}.bal` fixtures are exempt.
 
 Skip heavy jBallerina runs for pure docs/CI/chore with no behavior change; state that you skipped and why.
