@@ -277,7 +277,7 @@ Don't spend findings on what the linters already enforce: `make lint` (including
 
 - Once #1612 is on main, run `make lint-configs` and `python3 .github/scripts/test_check_lint_configs.py`. A module moved to a looser tier is a finding unless the PR explains it.
 - Once #1613 is on main, also run `make lint-func-usage`.
-- Lint each module that moves to a stricter tier with the PR merged into current main (`make lint-module/<name>`), and run any workspace-wide gate the PR adds (such as `make lint-func-usage`) the same way: main's new code may trip the new linters even though the PR head is clean (#1612).
+- For a PR that enables a linter or adds a gate (a module moving to a stricter tier, a linter newly enabled in an existing tier, a new workspace-wide gate such as `make lint-func-usage`), merge it into current main and run each affected check there (`make lint-module/<name>` for every module in the tier, plus the gate): main's newer code may trip the new linter even though the PR head is clean (#1612, #1607, #1613).
 
 #### Consistency with surrounding code
 
