@@ -300,7 +300,9 @@ def code_findings(summary):
 def answered_findings(n, summary):
     """Number of findings the summary still counts that the author has answered since: every unresolved finding
     thread of ours ends with a human's reply (a decline, a deferral or a question back), and the summary has no
-    PR-level code finding (those have no thread to reply in). Commit/PR findings don't count either way. 0 when any finding is still unanswered."""
+    PR-level code finding (those have no thread to reply in). Commit/PR findings don't count either way. 0 when any finding is still unanswered.
+    A finding whose thread was resolved isn't answered: a summary that counts more findings than there are answered
+    threads still has open ones (an author can resolve a thread the summary keeps OPEN by rule, e.g. a data race)."""
     counted = code_findings(summary)
     if not counted or re.search(r"^- (🔴|🟡|🔵|❓) \*\*", summary, re.M):
         return 0
@@ -308,13 +310,15 @@ def answered_findings(n, summary):
     last = {}
     for c in sorted(comments, key=lambda c: c["created_at"]):
         last[c.get("in_reply_to_id") or c["id"]] = c
+    replied = 0
     for c in _unresolved_firsts(n):
         if c["user"]["login"] != ME or "pre-pr-review:finding" not in c["body"]:
             continue
         end = last.get(c["id"], c)
         if end["user"]["login"] == ME or end["user"].get("type") != "User":
             return 0
-    return counted
+        replied += 1
+    return counted if replied >= counted else 0
 
 
 def unresolved_finding_threads(n):
