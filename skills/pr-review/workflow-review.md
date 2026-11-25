@@ -62,7 +62,7 @@ A rule the PR claims but that has no `-e` test is a finding. A rule it doesn't c
 
 ## 7. Tests
 
-Standard library rules apply (`corpus/lib/subset3/` + `corpus/integration/lib/subset3/` goldens). Workflow programs end when `main` returns, so a test drives the instance to completion with `waitForResult` (bounded) before printing. The scenarios worth covering are: activity + data event, two concurrent instances, a timeout, a panicking workflow, an unknown id, and each typed error from section 3.
+Standard library rules apply (`corpus/lib/subset<N>/` + `corpus/integration/lib/subset<N>/` goldens, in the open library subset). Workflow programs end when `main` returns, so a test drives the instance to completion with `waitForResult` (bounded) before printing. The scenarios worth covering are: activity + data event, two concurrent instances, a timeout, a panicking workflow, an unknown id, and each typed error from section 3.
 
 ## 8. Report additions
 
