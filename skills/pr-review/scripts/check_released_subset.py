@@ -114,15 +114,20 @@ def main():
 
     base = git("merge-base", base_ref, head_ref).strip()
     changes = git("diff", "--name-status", "-M", "--diff-filter=AMR", f"{base}...{head_ref}", "--", "corpus", "doc")
-    deleted = set(git("diff", "--name-only", "--no-renames", "--diff-filter=D", f"{base}...{head_ref}", "--", "corpus").split())
+    def stem(path):
+        return re.sub(r"-f?[vep]\.bal$", "", path)
+
+    deleted = {stem(p) for p in git("diff", "--name-only", "--no-renames", "--diff-filter=D", f"{base}...{head_ref}",
+                                    "--", "corpus").split() if p.endswith(".bal")}
     for line in changes.splitlines():
         parts = line.split("\t")
         status, path = parts[0], parts[-1]
         if released(path, docs):
             report("DOC", path, f"{path} documents a subset released in {tag}; document the change in the open subset's doc")
         elif released(path, tests):
-            # Promoting a known-failing test (x-fv.bal -> x-v.bal) fixes it in place; it isn't a new test.
-            if status == "A" and re.sub(r"-([vep])\.bal$", r"-f\1.bal", path) in deleted:
+            # Re-marking a released test (17-e.bal -> 17-v.bal, x-fv.bal -> x-v.bal) isn't a new test. Git pairs most
+            # of these as renames; the deleted stem catches one edited too much to pair.
+            if status == "A" and stem(path) in deleted:
                 continue
             if status == "A" or (status.startswith("R") and not released(parts[1], tests)):
                 report("NEW", path, f"This test is in a subset released in {tag}; move it to the open subset")

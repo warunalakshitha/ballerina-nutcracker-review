@@ -235,8 +235,9 @@ For every non-merge commit on `$MB..HEAD`:
   `corpus/bal/subset<open>/<open>-<same area>/` with goldens
   (`ast`/`cfg`/`desugared`/`bir`) and the `corpus/integration` `.txtar`, stdlib
   tests to the open `corpus/lib/subset<N>/`, and doc edits to the open subset doc.
-  Editing, re-marking or deleting an existing case, promoting a known-failing
-  `x-fv.bal` to `x-v.bal` in place, and regenerating goldens is fine. For a stack, attribute each file to the PR that added it. The repo's
+  Editing, re-marking or deleting an existing case, renaming a test in place to
+  change its kind (`17-e.bal` to `17-v.bal`, `x-fv.bal` to `x-v.bal`), and
+  regenerating goldens is fine. For a stack, attribute each file to the PR that added it. The repo's
   `Released Subset` CI check fails on `NEW` and `DOC` files, but not on
   `APPENDED` ones, so those are only caught here.
 - Docs and README lines the PR changes: check every factual statement against
