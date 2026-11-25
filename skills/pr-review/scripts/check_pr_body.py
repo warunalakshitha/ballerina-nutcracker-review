@@ -20,6 +20,10 @@ template when it changes. Reported, one line each:
               commit was dropped, or a file the PR renamed away), or a corpus fixture stem without its extension
               (`foo-v`, `foo-e`, `foo-p`, `foo-fv`, ...) that no file the PR adds or changes is named after; read
               each hit, since a body may also point at an unchanged file on purpose
+  COUNT       a line that names one test file (`test_*.py`, `*_test.py` or `*_test.go`) and one count ("16 tests",
+              "13 tests:") where the file at the PR head has a different number of `def test*` / `func Test*`
+              functions (a stale count after fixes added or merged tests); parametrized cases and subtests aren't
+              counted, so read the file before raising it
 
 CodeRabbit's auto-generated release-notes block is left out of every check: the author didn't write it.
 
@@ -44,16 +48,22 @@ SUBSET_DOC_ITEM = re.compile(r"doc/(lang|library)/subset|subset<n>\.md|subset do
 FIXTURE_STEM = re.compile(r"^[a-z0-9][a-z0-9_-]*-f?[vep]$")
 CODERABBIT_BLOCK = re.compile(r"<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->.*?"
                               r"(<!-- end of auto-generated comment: release notes by coderabbit\.ai -->|\Z)", re.S)
+# A test file path anywhere inside backticks, also inside a command (`python3 .github/scripts/test_x.py`).
+TEST_FILE = re.compile(r"[\w./-]*(?<![\w-])(?:test_[\w-]+\.py|[\w-]+_test\.(?:py|go))\b")
+TEST_COUNT = re.compile(r"\b(\d+)\s+(?:new\s+|unit\s+|regression\s+)?tests?\b", re.I)
+TEST_FUNC = {".py": re.compile(r"^\s*def test", re.M), ".go": re.compile(r"^func Test(?!Main\b)", re.M)}
 NO_ISSUE = re.compile(r"\bno (related |linked |tracking )?issue\b|\bwithout an issue\b|\bissue: none\b"
                       r"|\b(part of|related to|relates to|refs?|see|follow-up (to|of))\s+(#\d+|https://github\.com/\S+/issues/\d+)", re.I)
 
 
-def api(path):
+def api(path, missing_ok=False):
     out, page, items = None, 1, []
     while True:
         sep = "&" if "?" in path else "?"
         r = subprocess.run(["gh", "api", f"{path}{sep}per_page=100&page={page}"], capture_output=True, text=True)
         if r.returncode != 0:
+            if missing_ok and "404" in (r.stderr or r.stdout):
+                return None
             sys.exit(f"gh api {path} failed: {(r.stderr or r.stdout).strip()[:200]}")
         out = json.loads(r.stdout)
         if not isinstance(out, list):
@@ -135,6 +145,19 @@ def main():
             continue
         what = next((f"; the PR {v}" for k, v in gone.items() if hit(k)), "")
         problems.append(f"PATH        `{token}` is named in the body but the PR doesn't add or change it{what}")
+    for line in body.splitlines():
+        tests = {t for code in re.findall(r"`([^`]+)`", line) for t in TEST_FILE.findall(code)}
+        counts = TEST_COUNT.findall(line)
+        if len(tests) != 1 or len(counts) != 1:
+            continue
+        token = tests.pop()
+        path = next((f for f in files if f == token or f.endswith("/" + token)), token)
+        src = api(f"repos/{repo}/contents/{path}?ref={pr['head']['sha']}", missing_ok=True)
+        if not src or "content" not in src:
+            continue
+        have = len(TEST_FUNC[path[path.rindex("."):]].findall(base64.b64decode(src["content"]).decode()))
+        if have != int(counts[0]):
+            problems.append(f"COUNT       `{token}`: the body says {counts[0]} tests, the file at head has {have}")
     ticked = [l for l in body.splitlines() if re.match(r"\s*[-*]\s*\[[xX]\]", l)]
     if ticked:
         if any("corpus test" in l.lower() for l in ticked) and not any(f.startswith(("corpus/", "ls/corpus/")) for f in files):
