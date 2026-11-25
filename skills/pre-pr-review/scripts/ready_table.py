@@ -198,7 +198,10 @@ def main():
             note += commit_warning(commits)
         if removal:
             # The queue rejected it (or someone took it out): listed only in its own table, not as mergeable.
-            removed.append((p, removal, (why or "no blocker found; re-queue it") + note))
+            # The queue takes only PRs approved at their head; a push since the approval makes GitHub ask again.
+            if not why:
+                why = "re-queue it" if decision == "APPROVED" else "needs an approval at head before it can be re-queued"
+            removed.append((p, removal, why + note))
             continue
         if why and not waits:
             # Queued with our findings still open: it lands anyway, so flag it.
