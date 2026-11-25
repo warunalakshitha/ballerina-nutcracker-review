@@ -21,10 +21,13 @@ under "Could not check".
 """
 import functools
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from ghrest import DONT_MERGE, REPO, GhError, api, ci_state, merge_queue, mergeability, open_prs, pr_detail, review_decision, \
     skipped_by_label, summaries, answered_findings, unresolved_finding_threads, changes_requested_by, unresolved_other_threads, \
     COMMIT_LABEL, code_findings, status_counts
+
+WORKERS = 8  # PRs fetched at once; more risks GitHub's secondary rate limit
 
 # Stack members share base PRs, so fetch each PR's detail once.
 detail = functools.lru_cache(maxsize=None)(pr_detail)
@@ -170,6 +173,24 @@ def main():
     by_head = {p["head"]["ref"]: p for p in prs if (p["head"].get("repo") or {}).get("full_name") == REPO}
     queue_read = merge_queue({p["number"] for p in prs})
     queue = queue_read or {}
+    def fetch(p):
+        """Everything a reviewable PR's row needs from GitHub, or None when GitHub didn't answer."""
+        try:
+            why = why_not_ready(p, by_head)
+            # 0 findings, mergeable, reviewed at head: with only CI left it counts as mergeable once CI passes.
+            waits = bool(why) and why.startswith("CI pending")
+            decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
+            q = queue.get(p["number"])
+            return (why, waits, decision, human_checks(p), answered_findings(p["number"], latest_summary(p["number"])),
+                    commit_items(p), q, None if q else queue_removal(p["number"]))
+        except GhError:
+            return None
+
+    reviewable = [p for p in prs if not p["draft"] and not skipped_by_label(p)]
+    # Each PR costs several sequential `gh` calls (about a second each) plus waits for GitHub's mergeability check,
+    # so fetch PRs in parallel; the caches above may fetch a shared stack base twice, which is harmless.
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        fetched = dict(zip((p["number"] for p in reviewable), pool.map(fetch, reviewable)))
     for p in prs:
         if p["draft"]:
             parked.append((p, "draft"))
@@ -178,19 +199,11 @@ def main():
             labels = [l["name"] for l in p.get("labels", []) if any(k in l["name"].lower() for k in DONT_MERGE)]
             parked.append((p, "label: " + ", ".join(labels)))
             continue
-        try:
-            why = why_not_ready(p, by_head)
-            # 0 findings, mergeable, reviewed at head: with only CI left it counts as mergeable once CI passes.
-            waits = bool(why) and why.startswith("CI pending")
-            decision = review_decision(p["number"], p["head"]["sha"]) if why is None or waits else ""
-            checks = human_checks(p)
-            answered = answered_findings(p["number"], latest_summary(p["number"]))
-            commits = commit_items(p)
-            q = queue.get(p["number"])
-            removal = None if q else queue_removal(p["number"])
-        except GhError:
+        row = fetched[p["number"]]
+        if row is None:
             blocked.append((p, "could not check (GitHub didn't answer)"))
             continue
+        why, waits, decision, checks, answered, commits, q, removal = row
         if checks:
             humans.append((p, checks))
         note = f" ({answered} answered by the author, check by hand)" if answered else ""
