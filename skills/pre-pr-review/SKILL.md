@@ -226,13 +226,19 @@ For every non-merge commit on `$MB..HEAD`:
 - No unwanted files: agent-local settings (`.claude/settings.local.json`, `.cursor/`),
   coverage output (`coverage_report.html`, `*.out`), scratch `_*.bal`, debug dumps,
   files unrelated to the intent.
-- New corpus tests go in the open subset. Subsets 1–9 are released (subset9
-  shipped with 0.6.0), so a new `.bal` under `corpus/bal/subset[1-9]/`, or new
-  cases appended to an existing one, is a Nit: move them to
-  `corpus/bal/subset10/10-<same area>/`, with goldens (`ast`/`cfg`/`desugared`/`bir`)
-  and `corpus/integration` `.txtar`. Editing, renaming or re-marking an existing
-  case is fine. List both with `check_released_subset.py <base>` (for a stack,
-  attribute each file to the PR that added it).
+- New corpus tests and subset doc changes go in the open subsets. Every subset
+  that exists at the latest release tag is released, so tagging a release closes
+  it with no skill change. Run `check_released_subset.py <base>`. Its first line
+  names the tag and the open language and library subsets. Every `NEW`,
+  `APPENDED` or `DOC` line it prints is a file in a released subset, and is
+  **blocking**: raise one finding listing them all, asking to move the tests to
+  `corpus/bal/subset<open>/<open>-<same area>/` with goldens
+  (`ast`/`cfg`/`desugared`/`bir`) and the `corpus/integration` `.txtar`, stdlib
+  tests to the open `corpus/lib/subset<N>/`, and doc edits to the open subset doc.
+  Editing, re-marking or deleting an existing case, promoting a known-failing
+  `x-fv.bal` to `x-v.bal` in place, and regenerating goldens is fine. For a stack, attribute each file to the PR that added it. The repo's
+  `Released Subset` CI check fails on `NEW` and `DOC` files, but not on
+  `APPENDED` ones, so those are only caught here.
 - Docs and README lines the PR changes: check every factual statement against
   the source, not only the behaviour claims — a type's shape (open vs closed
   record, `readonly &`, `distinct`), a signature, a default, a path. Grep the
@@ -254,10 +260,10 @@ For every non-merge commit on `$MB..HEAD`:
   test anything new (e.g. renamed variables), not for a one-keyword variant that
   exercises a distinct case (`final` vs plain module var).
 - Standard-library tests have their own corpus and numbering: a new stdlib test is
-  `corpus/lib/subset3/<name>.bal` with its only golden at
-  `corpus/integration/lib/subset3/<name>.txtar` (no per-stage goldens). A new
-  stdlib test under `corpus/bal/...`, or a new file in `corpus/lib/subset1|2`, is
-  a Nit to move it there.
+  `corpus/lib/subset<N>/<name>.bal` in the open library subset, with its only
+  golden at `corpus/integration/lib/subset<N>/<name>.txtar` (no per-stage
+  goldens). A new stdlib test under `corpus/bal/...` is a Nit to move it there; one
+  in a released library subset is the blocking finding above.
 - Dead code: `staticcheck` / `golangci-lint` unused; plus by reading — unreachable
   branches, orphaned helpers, interface methods nothing calls (e.g. `Copy()` on a
   symbol never narrowed), duplicate corpus goldens. Team rule: a branch no `.bal`

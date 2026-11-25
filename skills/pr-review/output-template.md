@@ -92,7 +92,7 @@ Then one line: `N prior concerns, M fixed at head`. Empty → `None`.
 
 ## Subset doc
 
-Does the PR need a `doc/lang/subset10.md` update (new grammar support, a restriction or spec deviation added/changed/lifted, new langlib/method-call support — judged by behaviour at `main` vs head, not the title; a bug fix that only makes supported syntax conform to the spec needs none)? Always include this section, even with 0 findings. State `Not needed: <reason>`, `Updated: <what>` or `Missing: <bullets to add>` (missing → also a blocking row in Coding issues).
+Does the PR need an update to the open subset's `doc/lang/subset<N>.md` (new grammar support, a restriction or spec deviation added/changed/lifted, new langlib/method-call support — judged by behaviour at `main` vs head, not the title; a bug fix that only makes supported syntax conform to the spec needs none)? Always include this section, even with 0 findings. State `Not needed: <reason>`, `Updated: <what>` or `Missing: <bullets to add>` (missing → also a blocking row in Coding issues).
 
 ## Unused / unneeded
 
