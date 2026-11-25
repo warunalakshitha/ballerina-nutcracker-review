@@ -86,10 +86,14 @@ def highest(tag, *patterns):
 def main():
     base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
     head_ref = sys.argv[2] if len(sys.argv) > 2 else "HEAD"
+    # The release comes from current main, not base-ref: a PR (or the PR below a stacked one) opened before a release
+    # has an older base, and checking against that release would let its tests into a subset released since.
+    tag_ref = "origin/main" if subprocess.run(["git", "rev-parse", "-q", "--verify", "origin/main"],
+                                              capture_output=True).returncode == 0 else base_ref
     try:
-        tag = git("describe", "--tags", "--abbrev=0", "--match", TAG, base_ref).strip()
+        tag = git("describe", "--tags", "--abbrev=0", "--match", TAG, tag_ref).strip()
     except subprocess.CalledProcessError:
-        print(f"check_released_subset: no release tag reachable from {base_ref} (fetch tags first)", file=sys.stderr)
+        print(f"check_released_subset: no release tag reachable from {tag_ref} (fetch tags first)", file=sys.stderr)
         return 2
     lang = highest(tag, r"corpus/bal/subset(\d+)", r"doc/lang/subset(\d+)\.md")
     lib = highest(tag, r"corpus/lib/subset(\d+)", r"doc/library/subset(\d+)\.md")
