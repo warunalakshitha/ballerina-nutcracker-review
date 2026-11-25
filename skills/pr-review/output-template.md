@@ -131,6 +131,10 @@ Commands run and pass/fail summary.
 
 Shared state the diff touches that can be reached concurrently, with the two paths named, and whether `-race` reproduced it (command + result). Reproduced races also go in **Coding issues & nits** as `blocking`. Nothing concurrent touched → `None: <why>`.
 
+## Performance notes
+
+Runtime and stdlib native code only (SKILL.md step 4, **Performance notes**): at most three, strongest first, each `file:line` plus what grows and the scale where it matters. For the reviewer to weigh; not findings. Nothing qualifies, or no native code changed → `None`.
+
 ## Suggested next actions for reviewer
 
 Short checklist (e.g. post only non-overlapping comments, ask author to drop Co-authored-by, add corpus test X).
