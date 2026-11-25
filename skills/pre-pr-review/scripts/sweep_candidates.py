@@ -1,7 +1,7 @@
 """List open PRs a sweep still has to re-review: our latest summary was written by skills older than
 the sweep's target commit (or there is no summary yet).
 
-Usage: python3 sweep_candidates.py <target-skills-commit>
+Usage: python3 sweep_candidates.py <target-skills-commit> [--include-approved]
   Run with $TOOLS as the current repo or set TOOLS; the summary marker's `tools=<sha>` is compared with
   the target in that checkout (`git merge-base --is-ancestor`), so it must not be shallow.
 
@@ -9,7 +9,8 @@ Prints one line per candidate: first every PR whose head moved since our last su
 (`<N> MOVED <reviewed sha> -> <head> <merge>`, as scan_prs.py reports it: hourly rounds are paused during a
 sweep, so an author who pushed is reviewed first), then the stale ones, oldest PR first
 (`<N> STALE <tools sha or none> <MERGEABLE|UNKNOWN>`).
-Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head),
+Skips what scan_prs.py skips (drafts, don't-merge/dnm/hold/wip labels, PRs approved at their head, unless
+--include-approved is given),
 conflicting PRs, which a review would only report as conflicting, and PRs in the merge queue, which are
 about to land. Fetch failures print ERR.
 A swept PR whose author answered our findings since its summary is listed with the moved ones
@@ -40,9 +41,13 @@ def swept(tools_sha, target):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("usage: sweep_candidates.py <target-skills-commit>")
-    target = sys.argv[1]
+    args = sys.argv[1:]
+    include_approved = "--include-approved" in args
+    if include_approved:
+        args.remove("--include-approved")
+    if len(args) != 1:
+        sys.exit("usage: sweep_candidates.py <target-skills-commit> [--include-approved]")
+    target = args[0]
     if subprocess.run(["git", "-C", TOOLS, "cat-file", "-e", f"{target}^{{commit}}"]).returncode != 0:
         sys.exit(f"sweep_candidates: target {target} is not a commit in {TOOLS}")
     moved, stale = [], []
@@ -56,7 +61,7 @@ def main():
             continue
         n, sha = p["number"], p["head"]["sha"]
         try:
-            if review_decision(n, sha) == "APPROVED":
+            if not include_approved and review_decision(n, sha) == "APPROVED":
                 continue
             bodies = summaries(n)
             merge = mergeability(pr_detail(n))
